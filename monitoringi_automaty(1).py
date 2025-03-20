@@ -1101,21 +1101,54 @@ if sekcja == 'Cera+ Panthenol':
         ims = ims[ims['APD_Rodzaj_farmaceutyczny'].isin(['AP - Apteka','ME - Sklep zielarsko - medyczny','PU - Punkt apteczny'])]
         
         wynik_df_c = pd.merge(powiazanie_c, ims, left_on='KLIENT', right_on='Klient', how='left')
+        wynik_df_p1 = pd.merge(powiazanie_p1, ims, left_on='KLIENT', right_on='Klient', how='left')
+        wynik_df_p2 = pd.merge(powiazanie_p2, ims, left_on='KLIENT', right_on='Klient', how='left')
+        wynik_df_p3 = pd.merge(powiazanie_p3, ims, left_on='KLIENT', right_on='Klient', how='left')
         # Wybór potrzebnych kolumn: 'APD_kod_SAP_apteki' i 'max_percent'
         wynik_df_c = wynik_df_c[['KLIENT','APD_kod_SAP_apteki', 'max_percent']]
+        wynik_df_p1 = wynik_df_p1[['KLIENT','APD_kod_SAP_apteki', 'max_percent']]
+        wynik_df_p2 = wynik_df_p2[['KLIENT','APD_kod_SAP_apteki', 'max_percent']]
+        wynik_df_p3 = wynik_df_p3[['KLIENT','APD_kod_SAP_apteki', 'max_percent']]
         #to są kody SAP
         wynik_df1_c = wynik_df_c.rename(columns={'APD_kod_SAP_apteki': 'Kod klienta'})
         wynik_df1_c = wynik_df1_c[['Kod klienta','max_percent']]
+        wynik_df1_p1 = wynik_df_p1.rename(columns={'APD_kod_SAP_apteki': 'Kod klienta'})
+        wynik_df1_p1 = wynik_df1_p1[['Kod klienta','max_percent']]
+        wynik_df1_p2 = wynik_df_p2.rename(columns={'APD_kod_SAP_apteki': 'Kod klienta'})
+        wynik_df1_p2 = wynik_df1_p2[['Kod klienta','max_percent']]
+        wynik_df1_p3 = wynik_df_p3.rename(columns={'APD_kod_SAP_apteki': 'Kod klienta'})
+        wynik_df1_p3 = wynik_df1_p3[['Kod klienta','max_percent']]
             #wynik_df1
         #to są kody powiazan
         wynik_df2_c = wynik_df_c.rename(columns={'KLIENT': 'Kod klienta'})
         wynik_df2_c = wynik_df2_c[['Kod klienta','max_percent']]
+        wynik_df2_p1 = wynik_df_p1.rename(columns={'KLIENT': 'Kod klienta'})
+        wynik_df2_p1 = wynik_df2_p1[['Kod klienta','max_percent']]
+        wynik_df2_p2 = wynik_df_p2.rename(columns={'KLIENT': 'Kod klienta'})
+        wynik_df2_p2 = wynik_df2_p2[['Kod klienta','max_percent']]
+        wynik_df2_p3 = wynik_df_p3.rename(columns={'KLIENT': 'Kod klienta'})
+        wynik_df2_p3 = wynik_df2_p3[['Kod klienta','max_percent']]
         #wynik_df2
         #POŁĄCZYĆ wynik_df z standard_ost
         polaczone_c = pd.concat([standard_c, wynik_df1_c, wynik_df2_c], axis = 0)
         posortowane_c = polaczone_c.sort_values(by='max_percent', ascending=False)
         ostatecznie_c = posortowane_c.drop_duplicates(subset='Kod klienta')
         ostatecznie_c = ostatecznie_c[ostatecznie_c['max_percent'] != 0]
+
+        polaczone_p1 = pd.concat([standard_p1, wynik_df1_p1, wynik_df2_p1], axis = 0)
+        posortowane_p1 = polaczone_p1.sort_values(by='max_percent', ascending=False)
+        ostatecznie_p1 = posortowane_p1.drop_duplicates(subset='Kod klienta')
+        ostatecznie_p1 = ostatecznie_p1[ostatecznie_p1['max_percent'] != 0]
+
+        polaczone_p2 = pd.concat([standard_p2, wynik_df1_p2, wynik_df2_p2], axis = 0)
+        posortowane_p2 = polaczone_p2.sort_values(by='max_percent', ascending=False)
+        ostatecznie_p2 = posortowane_p2.drop_duplicates(subset='Kod klienta')
+        ostatecznie_p2 = ostatecznie_p2[ostatecznie_p2['max_percent'] != 0]
+
+        polaczone_p3 = pd.concat([standard_p3, wynik_df1_p3, wynik_df2_p3], axis = 0)
+        posortowane_p3 = polaczone_p3.sort_values(by='max_percent', ascending=False)
+        ostatecznie_p3 = posortowane_p3.drop_duplicates(subset='Kod klienta')
+        ostatecznie_p3 = ostatecznie_p3[ostatecznie_p3['max_percent'] != 0]
     
         st.write('Jeśli to pierwszy monitoring, pobierz ten plik, jeśli nie, wrzuć plik z poprzedniego monitoringu i NIE POBIERAJ TEGO PLIKU')
         
