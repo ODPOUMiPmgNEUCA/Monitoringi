@@ -1151,6 +1151,152 @@ if sekcja == 'Cera+ Panthenol':
         ostatecznie_p3 = ostatecznie_p3[ostatecznie_p3['max_percent'] != 0]
     
         st.write('Jeśli to pierwszy monitoring, pobierz ten plik, jeśli nie, wrzuć plik z poprzedniego monitoringu i NIE POBIERAJ TEGO PLIKU')
+        excel_file = io.BytesIO()
+
+        with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
+        # Jeśli dane BRAZOFLAMIN istnieją, zapisz je w odpowiednim arkuszu
+            if 'ostatecznie_c' in locals():
+                ostatecznie_c.to_excel(writer, index=False, sheet_name='CERA+')
+
+        # Jeśli dane diazepam istnieją, zapisz je w odpowiednim arkuszu
+            if 'ostatecznie_p1' in locals():
+                ostatecznie_p1.to_excel(writer, index=False, sheet_name='Panthenol 105210')
+
+            if 'ostatecznie_p2' in locals():
+                ostatecznie_p2.to_excel(writer, index=False, sheet_name='Panthenol 105211')
+
+            if 'ostatecznie_p3' in locals():
+                ostatecznie_p3.to_excel(writer, index=False, sheet_name='Panthenol 105212')
+
+        excel_file.seek(0)  # Resetowanie wskaźnika do początku pliku
+
+         # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Pobierz, jeśli to pierwszy monitoring',
+            data=excel_file,
+            file_name='czy_dodac.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    
+        # Plik z poprzedniego monitoringu
+        poprzedni = st.file_uploader(
+            label="Wrzuć plik z poprzedniego monitoringu"
+        )
+    
+        if poprzedni:
+            xls = pd.ExcelFile(poprzedni)  # Pobranie pliku z arkuszami
+    
+        # Wczytanie danych z odpowiednich arkuszy
+        if 'CERA+' in xls.sheet_names:
+            poprzedni_c = pd.read_excel(poprzedni, sheet_name='CERA+')
+            st.write('Poprzedni monitoring - CERA+:')
+            st.write(poprzedni_c.head())
+        
+        if 'Panthenol 105210' in xls.sheet_names:
+            poprzedni_p1 = pd.read_excel(poprzedni, sheet_name='Panthenol 105210')
+            st.write('Poprzedni monitoring - Panthenol 105210:')
+            st.write(poprzedni_p1.head())
+
+        if 'Panthenol 105211' in xls.sheet_names:
+            poprzedni_p2 = pd.read_excel(poprzedni, sheet_name='Panthenol 105211')
+            st.write('Poprzedni monitoring - Panthenol 105211:')
+            st.write(poprzedni_p2.head())
+        
+        if 'Panthenol 105212' in xls.sheet_names:
+            poprzedni_p3 = pd.read_excel(poprzedni, sheet_name='Panthenol 105212')
+            st.write('Poprzedni monitoring - Panthenol 105212:')
+            st.write(poprzedni_p3.head())
+
+        # Przetwarzanie 
+        if 'ostatecznie_c' in locals() and 'poprzedni_c' in locals():
+            poprzedni_c = poprzedni_c.rename(columns={'max_percent': 'old_percent'})
+            result_c = ostatecznie_c.merge(poprzedni_c[['Kod klienta', 'old_percent']], on='Kod klienta', how='left')
+            result_c['old_percent'] = result_c['old_percent'].fillna(0)
+            result_c['Czy dodać'] = result_c.apply(lambda row: 'DODAJ' if row['max_percent'] > row['old_percent'] else '', axis=1)
+        
+            # Przetwarzanie 
+        if 'ostatecznie_p1' in locals() and 'poprzedni_p1' in locals():
+            poprzedni_p1 = poprzedni_p1.rename(columns={'max_percent': 'old_percent'})
+            result_p1 = ostatecznie_p1.merge(poprzedni_p1[['Kod klienta', 'old_percent']], on='Kod klienta', how='left')
+            result_p1['old_percent'] = result_p1['old_percent'].fillna(0)
+            result_p1['Czy dodać'] = result_p1.apply(lambda row: 'DODAJ' if row['max_percent'] > row['old_percent'] else '', axis=1)
+
+        if 'ostatecznie_p2' in locals() and 'poprzedni_p2' in locals():
+            poprzedni_p2 = poprzedni_p2.rename(columns={'max_percent': 'old_percent'})
+            result_p2 = ostatecznie_p2.merge(poprzedni_p2[['Kod klienta', 'old_percent']], on='Kod klienta', how='left')
+            result_p2['old_percent'] = result_p2['old_percent'].fillna(0)
+            result_p2['Czy dodać'] = result_p2.apply(lambda row: 'DODAJ' if row['max_percent'] > row['old_percent'] else '', axis=1)
+
+
+        if 'ostatecznie_p3' in locals() and 'poprzedni_p3' in locals():
+            poprzedni_p3 = poprzedni_p3.rename(columns={'max_percent': 'old_percent'})
+            result_p3 = ostatecznie_p1.merge(poprzedni_p3[['Kod klienta', 'old_percent']], on='Kod klienta', how='left')
+            result_p3['old_percent'] = result_p3['old_percent'].fillna(0)
+            result_p3['Czy dodać'] = result_p3.apply(lambda row: 'DODAJ' if row['max_percent'] > row['old_percent'] else '', axis=1)
+
+       
+
+       
+
+       
+        # Zapisywanie plików do Excela
+        excel_file1 = io.BytesIO()
+        with pd.ExcelWriter(excel_file1, engine='xlsxwriter') as writer:
+            if 'result_c' in locals():
+                result_c.to_excel(writer, index=False, sheet_name='CERA+')
+            if 'result_p1' in locals():
+                result_p1.to_excel(writer, index=False, sheet_name='Panthenol 105210')
+            if 'result_p2' in locals():
+                result_p2.to_excel(writer, index=False, sheet_name='Panthenol 105211')
+            if 'result_p3' in locals():
+                result_p3.to_excel(writer, index=False, sheet_name='Panthenol 105212')
+
+
+        excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
+
+        # Definiowanie nazwy pliku
+        nazwa_pliku = f"CAERA+_PANTHENOL_{dzisiejsza_data}.xlsx"
+        # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Kliknij aby pobrać plik z kodami, które kody należy dodać',
+            data=excel_file1,
+            file_name=nazwa_pliku,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+        result_c = result_c.drop(columns=['old_percent', 'Czy dodać'])
+        result_p1 = result_p1.drop(columns=['old_percent', 'Czy dodać'])
+        result_p2 = result_p2.drop(columns=['Czy dodać'])
+        result_p3 = result_p3.drop(columns=['Czy dodać'])
+        # result_lg = result_lg.drop(columns=['old_pakiet', 'Czy dodać'])
+
+        st.write('Kliknij, aby pobrać plik z formułą max do następnego monitoringu')
+
+        # Tworzenie pliku Excel w pamięci
+        excel_file2 = io.BytesIO()
+    
+        # Zapis do pliku Excel w pamięci
+        with pd.ExcelWriter(excel_file2, engine='xlsxwriter') as writer:
+            result_c.to_excel(writer, index=False, sheet_name='CERA+')
+            result_p1.to_excel(writer, index=False, sheet_name='Panthenol 105210')
+            result_p2.to_excel(writer, index=False, sheet_name='Panthenol 105211')
+            result_p3.to_excel(writer, index=False, sheet_name='Panthenol 105212')
+
+
+        # Resetowanie wskaźnika do początku pliku
+        excel_file2.seek(0) 
+    
+        # Definiowanie nazwy pliku
+        nazwa_pliku = f"FM_CERA+_PANTHENOL_{dzisiejsza_data}.xlsx"
+    
+        # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Pobierz nowy plik FORMUŁA MAX',
+            data=excel_file2,
+            file_name=nazwa_pliku,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
         
                 
     
