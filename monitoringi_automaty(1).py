@@ -1156,16 +1156,20 @@ if sekcja == 'Cera+ Panthenol':
         with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
         # Jeśli dane BRAZOFLAMIN istnieją, zapisz je w odpowiednim arkuszu
             if 'ostatecznie_c' in locals():
+                ostatecznie_c = ostatecznie_c[['Kod klienta','max_percent']]
                 ostatecznie_c.to_excel(writer, index=False, sheet_name='CERA+')
 
         # Jeśli dane diazepam istnieją, zapisz je w odpowiednim arkuszu
             if 'ostatecznie_p1' in locals():
+                ostatecznie_p1 = ostatecznie_p1[['Kod klienta','max_percent']]
                 ostatecznie_p1.to_excel(writer, index=False, sheet_name='Panthenol 105210')
 
             if 'ostatecznie_p2' in locals():
+                ostatecznie_p2 = ostatecznie_p2[['Kod klienta','max_percent']]
                 ostatecznie_p2.to_excel(writer, index=False, sheet_name='Panthenol 105211')
 
             if 'ostatecznie_p3' in locals():
+                ostatecznie_p3 = ostatecznie_p3[['Kod klienta','max_percent']]
                 ostatecznie_p3.to_excel(writer, index=False, sheet_name='Panthenol 105212')
 
         excel_file.seek(0)  # Resetowanie wskaźnika do początku pliku
