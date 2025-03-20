@@ -1270,8 +1270,8 @@ if sekcja == 'Cera+ Panthenol':
 
         result_c = result_c.drop(columns=['old_percent', 'Czy dodać'])
         result_p1 = result_p1.drop(columns=['old_percent', 'Czy dodać'])
-        result_p2 = result_p2.drop(columns=['Czy dodać'])
-        result_p3 = result_p3.drop(columns=['Czy dodać'])
+        result_p2 = result_p2.drop(columns=['old_percent','Czy dodać'])
+        result_p3 = result_p3.drop(columns=['old_percent','Czy dodać'])
         # result_lg = result_lg.drop(columns=['old_pakiet', 'Czy dodać'])
 
         st.write('Kliknij, aby pobrać plik z formułą max do następnego monitoringu')
