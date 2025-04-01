@@ -1234,7 +1234,7 @@ if sekcja == 'Cera+ Panthenol':
 
         if 'ostatecznie_p3' in locals() and 'poprzedni_p3' in locals():
             poprzedni_p3 = poprzedni_p3.rename(columns={'max_percent': 'old_percent'})
-            result_p3 = ostatecznie_p1.merge(poprzedni_p3[['Kod klienta', 'old_percent']], on='Kod klienta', how='left')
+            result_p3 = ostatecznie_p3.merge(poprzedni_p3[['Kod klienta', 'old_percent']], on='Kod klienta', how='left')
             result_p3['old_percent'] = result_p3['old_percent'].fillna(0)
             result_p3['Czy dodać'] = result_p3.apply(lambda row: 'DODAJ' if row['max_percent'] > row['old_percent'] else '', axis=1)
 
