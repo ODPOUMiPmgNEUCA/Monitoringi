@@ -437,7 +437,7 @@ if sekcja == 'Plastry':
         
         # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
         if 'Rabat' in xls.sheet_names:
-            Rabat = pd.read_excel(df, sheet_name='Rabat', skiprows=18, usecols=[1, 2, 19, 20, 21, 22])
+            Rabat = pd.read_excel(df, sheet_name='Rabat', skiprows=17, usecols=[1, 2, 19, 20, 21, 22])
             st.write("Dane z arkusza Rabat:")
             st.write(Rabat.head())
 
