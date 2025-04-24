@@ -29,7 +29,7 @@ st.set_page_config(page_title='Monitoringi AUTOMATY', layout='wide')
 
 sekcja = st.sidebar.radio(
     'Wybierz monitoring:',
-    ('Cykl Q1','Musy','Plastry','Alergia','Cera+ Panthenol')
+    ('Cykl Q2','Musy','Plastry','Alergia','Cera+ Panthenol')
  )
 
 tabs_font_css = """
@@ -69,11 +69,11 @@ dzisiejsza_data = datetime.datetime.now().strftime("%d.%m.%Y")
 
 
 ############################################################################### CYKL Q1  ##############################################################################################
-if sekcja == 'Cykl Q1':
+if sekcja == 'Cykl Q2':
     st.write(tabs_font_css, unsafe_allow_html=True)
 
     df = st.file_uploader(
-        label = "Wrzuć plik Cykl - Cykl Q1"
+        label = "Wrzuć plik Cykl - Cykl Q2"
     )
     if df:
         df = pd.read_excel(df, sheet_name = 'Promocje na utrzymanie i FUS', skiprows = 15, usecols = [1,2,9,10])
