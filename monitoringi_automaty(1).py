@@ -1306,7 +1306,7 @@ if sekcja == 'Standy':
     st.write(tabs_font_css, unsafe_allow_html=True)
 
     df = st.file_uploader(
-        label = "Wrzuć plik Cykl - Cykl Q2"
+        label = "Wrzuć plik Cykl - Standy"
     )
     if df:
         df = pd.read_excel(df, sheet_name = 'Rabat', skiprows = 15, usecols = [1,2,8])
