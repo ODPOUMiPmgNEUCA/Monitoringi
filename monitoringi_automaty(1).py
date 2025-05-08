@@ -29,7 +29,7 @@ st.set_page_config(page_title='Monitoringi AUTOMATY', layout='wide')
 
 sekcja = st.sidebar.radio(
     'Wybierz monitoring:',
-    ('Cykl Q2','Musy','Plastry','Alergia','Cera+ Panthenol','Standy')
+    ('Cykl Q2','Musy','Plastry','Alergia','Cera+ Panthenol','Standy','Furagina')
  )
 
 tabs_font_css = """
@@ -68,7 +68,7 @@ dzisiejsza_data = datetime.datetime.now().strftime("%d.%m.%Y")
 
 
 
-############################################################################### CYKL Q1  ##############################################################################################
+############################################################################### CYKL Q2  ##############################################################################################
 if sekcja == 'Cykl Q2':
     st.write(tabs_font_css, unsafe_allow_html=True)
 
@@ -194,7 +194,7 @@ if sekcja == 'Cykl Q2':
         result.to_excel(writer, index=False, sheet_name='Sheet1')
     excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
 
-    nazwa_pliku1 = f"CYKL_Q1_{dzisiejsza_data}.xlsx"
+    nazwa_pliku1 = f"CYKL_Q2_{dzisiejsza_data}.xlsx"
     #Umożliwienie pobrania pliku Excel
     st.download_button(
         label='Pobierz',
@@ -212,7 +212,7 @@ if sekcja == 'Cykl Q2':
         result.to_excel(writer, index=False, sheet_name='Sheet1')
     excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
 
-    nazwa_pliku = f"FM_CYKL_Q1_{dzisiejsza_data}.xlsx"
+    nazwa_pliku = f"FM_CYKL_Q2_{dzisiejsza_data}.xlsx"
     # Umożliwienie pobrania pliku Excel
     st.download_button(
         label='Pobierz nowy plik FORMUŁA MAX',
@@ -1453,7 +1453,289 @@ if sekcja == 'Standy':
     )
 
 
+##################################################################################### FURAGINA ############################################################################################3
+
+############################################################################# ALERGIA #####################################################################################
+
+if sekcja == 'Furagina':
+    st.write(tabs_font_css, unsafe_allow_html=True)
+
+    df = st.file_uploader(
+        label="Wrzuć plik Cykl - Alergia"
+    )
+    
+    if df:
+        # Pobieramy listę dostępnych arkuszy
+        xls = pd.ExcelFile(df)
         
+        # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
+        if '93212' in xls.sheet_names:
+            Lg = pd.read_excel(df, sheet_name='93212', skiprows=15, usecols=[1, 2, 9])
+            st.write("Dane z arkusza 93212:")
+            st.write(Lg.head())
+
+        # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
+        if '93213' in xls.sheet_names:
+            Cg = pd.read_excel(df, sheet_name='93213', skiprows=15, usecols=[1, 2, 9])
+            st.write("Dane z arkusza 93213")
+            st.write(Cg.head())
+
+        # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
+        if '91577' in xls.sheet_names:
+            Gg = pd.read_excel(df, sheet_name='91577', skiprows=15, usecols=[1, 2, 9])
+            st.write("Dane z arkusza 93213")
+            st.write(Gg.head())
+
+
+        #usuń braki danych z Kod klienta
+        Lg = Lg.dropna(subset=['KLIENT']) 
+        Cg = Cg.dropna(subset=['KLIENT'])
+        Gg = Gg.dropna(subset=['KLIENT'])
+
+        Lg = Lg[~Lg['PAKIET'].str.lower().str.contains('brak')]
+        Cg = Cg[~Cg['PAKIET'].str.lower().str.contains('brak')]
+        Gg = Gg[~Gg['PAKIET'].str.lower().str.contains('brak')]
+
+        # klient na całkowite
+        Lg['KLIENT'] = Lg['KLIENT'].astype(int)
+        Cg['KLIENT'] = Cg['KLIENT'].astype(int)
+        Gg['KLIENT'] = Gg['KLIENT'].astype(int)
+
+ 
+        
+        # Dodaj kolumnę 'SIECIOWY', która będzie zawierać 'SIECIOWY' jeśli w kolumnach '12' lub '14' jest słowo 'powiązanie'
+        Lg['SIECIOWY'] = Lg.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['PAKIET']).lower() else '', axis=1)
+        Cg['SIECIOWY'] = Cg.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['PAKIET']).lower() else '', axis=1)
+        Gg['SIECIOWY'] = Gg.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['PAKIET']).lower() else '', axis=1)
+
+        Lg['pakiet'] = Lg['PAKIET'].apply(extract_numbers_as_text)
+        Cg['pakiet'] = Cg['PAKIET'].apply(extract_numbers_as_text)
+        Gg['pakiet'] = Gg['PAKIET'].apply(extract_numbers_as_text)
+        #Lg
+
+    
+        # Dodaj nową kolumnę 'max_percent'
+
+        Lg1 = Lg[Lg['SIECIOWY'] == 'SIECIOWY']
+        Lg2 = Lg[Lg['SIECIOWY'] != 'SIECIOWY']
+        Cg1 = Cg[Cg['SIECIOWY'] == 'SIECIOWY']
+        Cg2 = Cg[Cg['SIECIOWY'] != 'SIECIOWY']
+        Gg1 = Gg[Gg['SIECIOWY'] == 'SIECIOWY']
+        Gg2 = Gg[Gg['SIECIOWY'] != 'SIECIOWY']
+        
+        #### p
+        Lg1 = Lg1[['KLIENT','Kod klienta','pakiet']]
+        Cg1 = Cg1[['KLIENT','Kod klienta','pakiet']]
+        Gg1 = Gg1[['KLIENT','Kod klienta','pakiet']]
+        Lg2 = Lg2[['Kod klienta','pakiet']]
+        Cg2 = Cg2[['Kod klienta','pakiet']]
+        Gg2 = Gg2[['Kod klienta','pakiet']]
+        
+        stand_lg = Lg2
+        stand_cg= Cg2
+        stand_gg = Gg2
+        pow_lg = Lg1
+        pow_cg = Cg1
+        pow_gg = Gg1
+
+
+
+        
+        #TERAZ IMS
+        ims = st.file_uploader(
+            label = "Wrzuć plik ims_nhd"
+        )
+    
+        if ims:
+            ims = pd.read_excel(ims, usecols=[0,2,19,21])
+            st.write(ims.head())
+    
+        ims = ims[ims['APD_Czy_istnieje_na_rynku']==1]
+        ims = ims[ims['APD_Rodzaj_farmaceutyczny'].isin(['AP - Apteka','ME - Sklep zielarsko - medyczny','PU - Punkt apteczny'])]
+    
+        wynik_df_lg = pd.merge(pow_lg, ims, left_on='KLIENT', right_on='Klient', how='left')
+        wynik_df_cg = pd.merge(pow_cg, ims, left_on='KLIENT', right_on='Klient', how='left')
+        wynik_df_gg = pd.merge(pow_gg, ims, left_on='KLIENT', right_on='Klient', how='left')
+    
+        # Wybór potrzebnych kolumn: 'APD_kod_SAP_apteki' i 'max_percent'
+        wynik_df_lg = wynik_df_lg[['KLIENT','APD_kod_SAP_apteki', 'pakiet']]
+        wynik_df_cg = wynik_df_cg[['KLIENT','APD_kod_SAP_apteki', 'pakiet']]
+        wynik_df_gg = wynik_df_gg[['KLIENT','APD_kod_SAP_apteki', 'pakiet']]
+    
+        #to są kody SAP
+
+        wynik_df1_lg = wynik_df_lg.rename(columns={'APD_kod_SAP_apteki': 'Kod klienta'})
+        wynik_df1_lg = wynik_df1_lg[['Kod klienta','pakiet']]
+
+        wynik_df1_cg = wynik_df_cg.rename(columns={'APD_kod_SAP_apteki': 'Kod klienta'})
+        wynik_df1_cg = wynik_df1_cg[['Kod klienta','pakiet']]
+
+        wynik_df1_gg = wynik_df_gg.rename(columns={'APD_kod_SAP_apteki': 'Kod klienta'})
+        wynik_df1_gg = wynik_df1_gg[['Kod klienta','pakiet']]
+        #wynik_df1
+    
+        #to są kody powiazan
+
+        wynik_df2_lg = wynik_df_lg.rename(columns={'KLIENT': 'Kod klienta'})
+        wynik_df2_lg = wynik_df2_lg[['Kod klienta','pakiet']]
+
+        wynik_df2_cg = wynik_df_cg.rename(columns={'KLIENT': 'Kod klienta'})
+        wynik_df2_cg = wynik_df2_cg[['Kod klienta','pakiet']]
+
+        wynik_df2_gg = wynik_df_cg.rename(columns={'KLIENT': 'Kod klienta'})
+        wynik_df2_gg = wynik_df2_cg[['Kod klienta','pakiet']]
+        #wynik_df2
+
+        #POŁĄCZYĆ wynik_df z standard_ost
+
+        polaczone_lg = pd.concat([stand_lg, wynik_df1_lg, wynik_df2_lg], axis = 0)
+        polaczone_cg = pd.concat([stand_cg, wynik_df1_cg, wynik_df2_cg], axis = 0)
+        polaczone_gg = pd.concat([stand_gg, wynik_df1_gg, wynik_df2_gg], axis = 0)
+
+        ostatecznie_lg = polaczone_lg.drop_duplicates(subset=['Kod klienta', 'pakiet'])
+        ostatecznie_cg = polaczone_cg.drop_duplicates(subset=['Kod klienta', 'pakiet'])
+        ostatecznie_gg = polaczone_gg.drop_duplicates(subset=['Kod klienta', 'pakiet'])
+
+        # ostatecznie_lg
+        
+        st.write('Jeśli to pierwszy monitoring, pobierz ten plik, jeśli nie, wrzuć plik z poprzedniego monitoringu i NIE POBIERAJ TEGO PLIKU')
+        excel_file = io.BytesIO()
+
+        with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
+        # Jeśli dane BRAZOFLAMIN istnieją, zapisz je w odpowiednim arkuszu
+
+            if 'ostatecznie_lg' in locals():
+                ostatecznie_lg.to_excel(writer, index=False, sheet_name='93212')
+
+            if 'ostatecznie_cg' in locals():
+                ostatecznie_cg.to_excel(writer, index=False, sheet_name='93213')
+
+            if 'ostatecznie_gg' in locals():
+                ostatecznie_cg.to_excel(writer, index=False, sheet_name='91577')
+
+        excel_file.seek(0)  # Resetowanie wskaźnika do początku pliku
+
+         # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Pobierz, jeśli to pierwszy monitoring',
+            data=excel_file,
+            file_name='czy_dodac.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    
+        # Plik z poprzedniego monitoringu
+        poprzedni = st.file_uploader(
+            label="Wrzuć plik z poprzedniego monitoringu"
+        )
+    
+        if poprzedni:
+            xls = pd.ExcelFile(poprzedni)  # Pobranie pliku z arkuszami
+    
+        # Wczytanie danych z odpowiednich arkuszy
+
+        if '93212' in xls.sheet_names:
+            poprzedni_lg = pd.read_excel(poprzedni, sheet_name='93212')
+            st.write('Poprzedni monitoring - 93212:')
+            st.write(poprzedni_lg.head())
+        
+        if '93213' in xls.sheet_names:
+            poprzedni_cg = pd.read_excel(poprzedni, sheet_name='93213')
+            st.write('Poprzedni monitoring - 93213:')
+            st.write(poprzedni_cg.head())
+
+        if '91577' in xls.sheet_names:
+            poprzedni_gg = pd.read_excel(poprzedni, sheet_name='91577')
+            st.write('Poprzedni monitoring - 91577:')
+            st.write(poprzedni_gg.head())
+
+        # Przetwarzanie 
+
+        if 'ostatecznie_lg' in locals() and 'poprzedni_lg' in locals():
+            # Zmień nazwę kolumny 'pakiet' na 'old_pakiet' w poprzedni_lg
+            # poprzedni_lg = poprzedni_lg.rename(columns={'pakiet': 'old_pakiet'})
+            # Dodaj poprzedni_lg na dole ostatecznie_lg
+            result_lg = pd.concat([ostatecznie_lg, poprzedni_lg], ignore_index=True)
+            # Usuń duplikaty na podstawie kluczowych kolumn (zachowując pierwsze wystąpienie)
+            result_lg = result_lg.drop_duplicates(subset=['Kod klienta', 'pakiet'], keep='first')
+            # Oznacz nowe wiersze (takie, które nie były w poprzedni_lg)
+            result_lg['Czy dodać'] = result_lg.apply(lambda row: 'DODAJ' if row['Kod klienta'] not in poprzedni_lg['Kod klienta'].values 
+                                                     or row['pakiet'] not in poprzedni_lg['pakiet'].values else '', axis=1)
+
+        if 'ostatecznie_cg' in locals() and 'poprzedni_cg' in locals():
+            # Zmień nazwę kolumny 'pakiet' na 'old_pakiet' w poprzedni_lg
+            # poprzedni_lg = poprzedni_lg.rename(columns={'pakiet': 'old_pakiet'})
+            # Dodaj poprzedni_lg na dole ostatecznie_lg
+            result_cg = pd.concat([ostatecznie_cg, poprzedni_cg], ignore_index=True)
+            # Usuń duplikaty na podstawie kluczowych kolumn (zachowując pierwsze wystąpienie)
+            result_cg = result_cg.drop_duplicates(subset=['Kod klienta', 'pakiet'], keep='first')
+            # Oznacz nowe wiersze (takie, które nie były w poprzedni_lg)
+            result_cg['Czy dodać'] = result_cg.apply(lambda row: 'DODAJ' if row['Kod klienta'] not in poprzedni_cg['Kod klienta'].values 
+                                                     or row['pakiet'] not in poprzedni_cg['pakiet'].values else '', axis=1)
+
+        if 'ostatecznie_gg' in locals() and 'poprzedni_gg' in locals():
+            # Zmień nazwę kolumny 'pakiet' na 'old_pakiet' w poprzedni_lg
+            # poprzedni_lg = poprzedni_lg.rename(columns={'pakiet': 'old_pakiet'})
+            # Dodaj poprzedni_lg na dole ostatecznie_lg
+            result_gg = pd.concat([ostatecznie_gg, poprzedni_gg], ignore_index=True)
+            # Usuń duplikaty na podstawie kluczowych kolumn (zachowując pierwsze wystąpienie)
+            result_gg = result_gg.drop_duplicates(subset=['Kod klienta', 'pakiet'], keep='first')
+            # Oznacz nowe wiersze (takie, które nie były w poprzedni_lg)
+            result_gg['Czy dodać'] = result_gg.apply(lambda row: 'DODAJ' if row['Kod klienta'] not in poprzedni_gg['Kod klienta'].values 
+                                                     or row['pakiet'] not in poprzedni_gg['pakiet'].values else '', axis=1)
+
+       
+        # Zapisywanie plików do Excela
+        excel_file1 = io.BytesIO()
+        with pd.ExcelWriter(excel_file1, engine='xlsxwriter') as writer:
+            if 'result_lg' in locals():
+                result_lg.to_excel(writer, index=False, sheet_name='93212')
+            if 'result_cg' in locals():
+                result_cg.to_excel(writer, index=False, sheet_name='93213')
+            if 'result_gg' in locals():
+                result_gg.to_excel(writer, index=False, sheet_name='91577')
+
+
+        excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
+
+        # Definiowanie nazwy pliku
+        nazwa_pliku = f"FURAGINA_{dzisiejsza_data}.xlsx"
+        # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Kliknij aby pobrać plik z kodami, które kody należy dodać',
+            data=excel_file1,
+            file_name=nazwa_pliku,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+        result_lg = result_lg.drop(columns=['Czy dodać'])
+        result_cg = result_cg.drop(columns=['Czy dodać'])
+        result_gg = result_gg.drop(columns=['Czy dodać'])
+        # result_lg = result_lg.drop(columns=['old_pakiet', 'Czy dodać'])
+
+        st.write('Kliknij, aby pobrać plik z formułą max do następnego monitoringu')
+
+        # Tworzenie pliku Excel w pamięci
+        excel_file2 = io.BytesIO()
+    
+        # Zapis do pliku Excel w pamięci
+        with pd.ExcelWriter(excel_file2, engine='xlsxwriter') as writer:
+            result_lg.to_excel(writer, index=False, sheet_name='93212')
+            result_cg.to_excel(writer, index=False, sheet_name='93213')
+            result_gg.to_excel(writer, index=False, sheet_name='91577')
+
+
+        # Resetowanie wskaźnika do początku pliku
+        excel_file2.seek(0) 
+    
+        # Definiowanie nazwy pliku
+        nazwa_pliku = f"FM_FURAGINA_{dzisiejsza_data}.xlsx"
+    
+        # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Pobierz nowy plik FORMUŁA MAX',
+            data=excel_file2,
+            file_name=nazwa_pliku,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 
     
         
