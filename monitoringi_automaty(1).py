@@ -1584,8 +1584,8 @@ if sekcja == 'Furagina':
         wynik_df2_cg = wynik_df_cg.rename(columns={'KLIENT': 'Kod klienta'})
         wynik_df2_cg = wynik_df2_cg[['Kod klienta','pakiet']]
 
-        wynik_df2_gg = wynik_df_cg.rename(columns={'KLIENT': 'Kod klienta'})
-        wynik_df2_gg = wynik_df2_cg[['Kod klienta','pakiet']]
+        wynik_df2_gg = wynik_df_gg.rename(columns={'KLIENT': 'Kod klienta'})
+        wynik_df2_gg = wynik_df2_gg[['Kod klienta','pakiet']]
         #wynik_df2
 
         #POŁĄCZYĆ wynik_df z standard_ost
