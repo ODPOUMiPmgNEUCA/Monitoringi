@@ -1613,7 +1613,7 @@ if sekcja == 'Furagina':
                 ostatecznie_cg.to_excel(writer, index=False, sheet_name='93213')
 
             if 'ostatecznie_gg' in locals():
-                ostatecznie_cg.to_excel(writer, index=False, sheet_name='91577')
+                ostatecznie_gg.to_excel(writer, index=False, sheet_name='91577')
 
         excel_file.seek(0)  # Resetowanie wskaźnika do początku pliku
 
