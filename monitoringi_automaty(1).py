@@ -1596,6 +1596,7 @@ if sekcja == 'Furagina':
 
         ostatecznie_lg = polaczone_lg.drop_duplicates(subset=['Kod klienta', 'pakiet'])
         ostatecznie_cg = polaczone_cg.drop_duplicates(subset=['Kod klienta', 'pakiet'])
+        ostatecznie_cg = ostatecznie_cg[ostatecznie_cg['Kod klienta'].notna()]  # usuwa NaN
         ostatecznie_gg = polaczone_gg.drop_duplicates(subset=['Kod klienta', 'pakiet'])
 
         # ostatecznie_lg
