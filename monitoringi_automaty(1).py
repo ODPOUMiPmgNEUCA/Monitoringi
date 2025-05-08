@@ -1490,6 +1490,10 @@ if sekcja == 'Furagina':
         Cg = Cg.dropna(subset=['KLIENT'])
         Gg = Gg.dropna(subset=['KLIENT'])
 
+        Lg.columns = ['KLIENT', 'Kod klienta', 'PAKIET']
+        Cg.columns = ['KLIENT', 'Kod klienta', 'PAKIET']
+        Gg.columns = ['KLIENT', 'Kod klienta', 'PAKIET']
+
         Lg = Lg[~Lg['PAKIET'].str.lower().str.contains('brak')]
         Cg = Cg[~Cg['PAKIET'].str.lower().str.contains('brak')]
         Gg = Gg[~Gg['PAKIET'].str.lower().str.contains('brak')]
