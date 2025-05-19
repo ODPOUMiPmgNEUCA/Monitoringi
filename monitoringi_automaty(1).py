@@ -76,7 +76,9 @@ if sekcja == 'Cykl Q2':
         label = "Wrzuć plik Cykl - Cykl Q2"
     )
 
-    df = pd.read_excel(df, engine="openpyxl")
+    if df:
+        # Pobieramy listę dostępnych arkuszy
+        xls = pd.ExcelFile(df)
 
 
     #usuń braki danych z Kod klienta
