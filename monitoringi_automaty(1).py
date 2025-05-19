@@ -76,12 +76,12 @@ if sekcja == 'Cykl Q2':
         label = "Wrzuć plik Cykl - Cykl Q2", type=["xlsx"]
     )
 
-    if df:
+    if df is not None:
         # Pobieramy listę dostępnych arkuszy
         xls = pd.ExcelFile(df)
-        df = pd.read_excel(df)
+        #df = pd.read_excel(df)
 
-
+    df = pd.read_excel(df)
     #usuń braki danych z Kod klienta
     df = df.dropna(subset=['Kod klienta'])
 
