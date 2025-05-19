@@ -73,7 +73,7 @@ if sekcja == 'Cykl Q2':
     st.write(tabs_font_css, unsafe_allow_html=True)
 
     df = st.file_uploader(
-        label = "Wrzuć plik Cykl - Cykl Q2"
+        label = "Wrzuć plik Cykl - Cykl Q2", type=["xlsx"]
     )
 
     if df:
