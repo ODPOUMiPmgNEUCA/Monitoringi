@@ -76,15 +76,7 @@ if sekcja == 'Cykl Q2':
         label = "Wrzuć plik Cykl - Cykl Q2"
     )
 
-    try:
-        df = pd.read_excel(uploaded_file)
-        if df is None:
-            st.error("Plik został wczytany, ale zawierał pustą wartość (None).")
-        else:
-            st.write("Podgląd danych:")
-            st.write(df.head())
-    except Exception as e:
-        st.error(f"Błąd przy wczytywaniu pliku: {e}")
+    df = pd.read_excel(df, engine="openpyxl")
 
 
     #usuń braki danych z Kod klienta
