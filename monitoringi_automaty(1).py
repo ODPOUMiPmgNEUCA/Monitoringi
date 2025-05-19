@@ -76,14 +76,9 @@ if sekcja == 'Cykl Q2':
         label = "Wrzuć plik Cykl - Cykl Q2"
     )
 
-    try:
+    if df:
         df = pd.read_excel(df, sheet_name = 'Promocje na utrzymanie i FUS', skiprows = 15, usecols = [1,2,9,10])
         st.write(df.head())
-    except Exception as e:
-        st.error(f"Błąd podczas wczytywania pliku: {e}")
-    #if df:
-        #df = pd.read_excel(df, sheet_name = 'Promocje na utrzymanie i FUS', skiprows = 15, usecols = [1,2,9,10])
-        #st.write(df.head())
 
 
     #usuń braki danych z Kod klienta
