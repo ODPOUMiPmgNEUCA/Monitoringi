@@ -79,6 +79,7 @@ if sekcja == 'Cykl Q2':
     if df:
         # Pobieramy listę dostępnych arkuszy
         xls = pd.ExcelFile(df)
+        df = pd.read_excel(df)
 
 
     #usuń braki danych z Kod klienta
