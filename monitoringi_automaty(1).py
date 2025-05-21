@@ -72,17 +72,32 @@ dzisiejsza_data = datetime.datetime.now().strftime("%d.%m.%Y")
 if sekcja == 'Cykl Q2':
     st.write(tabs_font_css, unsafe_allow_html=True)
 
-    df = st.file_uploader(
-        label = "Wrzuć plik Cykl - Cykl Q2", type=["xlsx"]
-    )
+    #df = st.file_uploader(
+        #label = "Wrzuć plik Cykl - Cykl Q2", type=["xlsx"] )
 
-    if df is not None:
+    #if df is not None:
         # Pobieramy listę dostępnych arkuszy
-        xls = pd.ExcelFile(df)
+        #xls = pd.ExcelFile(df)
         #df = pd.read_excel(df)
 
-    df = pd.read_excel(df)
-    #usuń braki danych z Kod klienta
+   # df = pd.read_excel(df)
+
+
+    uploaded_file = st.file_uploader("Wrzuć plik Excel", type=["xlsx"])
+
+    if uploaded_file:
+        try:
+            excel = pd.ExcelFile(uploaded_file)
+            sheet_name = excel.sheet_names[0]  # lub selectbox
+            df = excel.parse(sheet_name)
+            st.success(f"Wczytano arkusz: {sheet_name}")
+            st.write(df.head())
+        except Exception as e:
+            st.error(f"Nie udało się wczytać pliku: {e}")
+            df = None
+    else:
+        df = None
+        #usuń braki danych z Kod klienta
     df = df.dropna(subset=['Kod klienta'])
 
     # klient na całkowite
