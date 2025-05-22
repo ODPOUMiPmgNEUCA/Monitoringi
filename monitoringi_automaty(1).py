@@ -450,6 +450,7 @@ if sekcja == 'Plastry':
         Rabat = Rabat.dropna(subset=['KLIENT']) 
         Eksp = Eksp.dropna(subset=['KLIENT'])
         st.write(Eksp['KLIENT'].unique())
+        st.write(Eksp[~Eksp['KLIENT'].apply(lambda x: str(x).isdigit())])
 
         # klient na całkowite
         Rabat['KLIENT'] = Rabat['KLIENT'].astype(int)
