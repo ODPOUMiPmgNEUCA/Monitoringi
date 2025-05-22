@@ -448,6 +448,7 @@ if sekcja == 'Plastry':
 
         #usuń braki danych z Kod klienta
         Rabat = Rabat.dropna(subset=['KLIENT']) 
+        Eksp['KLIENT'].unique()
         Eksp = Eksp.dropna(subset=['KLIENT'])
 
         # klient na całkowite
