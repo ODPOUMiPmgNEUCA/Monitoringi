@@ -460,6 +460,8 @@ if sekcja == 'Plastry':
 
         Rabat.columns=['KLIENT','Kod klienta','9','14','18','20']
         Eksp.columns=['KLIENT','Kod klienta','14']
+        Rabat = Rabat[Rabat['KLIENT'] != '(puste)']
+        Eksp = Eksp[Eksp['KLIENT'] != '(puste)']
  
         
         # Dodaj kolumnę 'SIECIOWY', która będzie zawierać 'SIECIOWY' jeśli w kolumnach '12' lub '14' jest słowo 'powiązanie'
