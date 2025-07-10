@@ -452,7 +452,9 @@ if sekcja == 'Plastry':
         #Eksp = Eksp.dropna(subset=['Kod klienta'])
         #st.write(Eksp['KLIENT'].unique())
         #st.write(Eksp[~Eksp['KLIENT'].apply(lambda x: str(x).isdigit())])
-
+        Rabat = Rabat[Rabat['KLIENT'] != '(puste)']
+        Eksp = Eksp[Eksp['KLIENT'] != '(puste)']
+        
         # klient na całkowite
         Rabat['KLIENT'] = Rabat['KLIENT'].astype(int)
         Eksp['KLIENT'] = Eksp['KLIENT'].astype(int)
@@ -460,8 +462,7 @@ if sekcja == 'Plastry':
 
         Rabat.columns=['KLIENT','Kod klienta','9','14','18','20']
         Eksp.columns=['KLIENT','Kod klienta','14']
-        Rabat = Rabat[Rabat['KLIENT'] != '(puste)']
-        Eksp = Eksp[Eksp['KLIENT'] != '(puste)']
+        
  
         
         # Dodaj kolumnę 'SIECIOWY', która będzie zawierać 'SIECIOWY' jeśli w kolumnach '12' lub '14' jest słowo 'powiązanie'
