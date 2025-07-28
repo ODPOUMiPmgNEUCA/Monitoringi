@@ -83,6 +83,7 @@ if sekcja == 'Cykl Q3':
     df = df.dropna(subset=['Kod klienta'])
 
     # klient na całkowite
+    df = df[df['KLIENT'] != '(puste)']
     df['KLIENT'] = df['KLIENT'].astype(int)
     df['Kod klienta'] = df['Kod klienta'].astype(int)
 
