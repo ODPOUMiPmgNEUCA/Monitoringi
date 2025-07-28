@@ -767,7 +767,7 @@ if sekcja == 'Standy':
     df['Kod klienta'] = df['Kod klienta'].astype(int)
 
     # Zmiana nazw kolumn
-    df = df.rename(columns={'0.16.1': '16'})
+    df = df.rename(columns={'0.16.2': '16'})
 
     #Dodaj kolumnę 'SIECIOWY', która będzie zawierać 'SIECIOWY' jeśli w kolumnach '12' lub '14' jest słowo 'powiązanie'
     df['SIECIOWY'] = df.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['16']).lower() else '', axis=1)
