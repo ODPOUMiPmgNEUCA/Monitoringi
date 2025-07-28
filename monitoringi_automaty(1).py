@@ -755,7 +755,7 @@ if sekcja == 'Standy':
         label = "Wrzuć plik Cykl - Standy"
     )
     if df:
-        df = pd.read_excel(df, sheet_name = 'Rabat', skiprows = 15, usecols = [1,2,9])
+        df = pd.read_excel(df, sheet_name = 'Rabat', skiprows = 16, usecols = [1,2,9])
         st.write(df.head())
 
 
