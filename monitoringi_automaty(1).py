@@ -942,10 +942,10 @@ if sekcja == 'Helituspan':
         excel_file1 = io.BytesIO()
         with pd.ExcelWriter(excel_file1, engine='xlsxwriter') as writer:
             if 'result_lr' in locals():
-                result_lr.to_excel(writer, index=False, sheet_name='Levalergedd_rabat')
+                result_lr.to_excel(writer, index=False, sheet_name='Promocje_rabat')
 
             if 'result_lg' in locals():
-                result_lg.to_excel(writer, index=False, sheet_name='Levalergedd_gratis')
+                result_lg.to_excel(writer, index=False, sheet_name='Promocje_gratis')
 
 
         excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
