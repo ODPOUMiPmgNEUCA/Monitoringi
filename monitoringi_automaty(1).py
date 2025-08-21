@@ -805,8 +805,8 @@ if sekcja == 'Helituspan':
         # Dodaj nową kolumnę 'max_percent'
         Lr1 = Lr[Lr['SIECIOWY'] == 'SIECIOWY']
         Lr2 = Lr[Lr['SIECIOWY'] != 'SIECIOWY']
-        Lr1['max_percent'] = Lr1[['15_percent', '18_percent', '20_percent','22_percent','25_percent']].max(axis=1)
-        Lr2['max_percent'] = Lr2[['15_percent', '18_percent', '20_percent','22_percent','25_percent']].max(axis=1)
+        Lr1['max_percent'] = Lr1[['rabat_percent']].max(axis=1)
+        Lr2['max_percent'] = Lr2[['rabat_percent']].max(axis=1)
         
         ###### 1 to SIECIOWI, 2 to punkt dostaw
         Lr1 = Lr1[['KLIENT','Kod klienta','max_percent']]
