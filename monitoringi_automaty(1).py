@@ -1143,7 +1143,7 @@ if sekcja == 'Helituspan':
 
 
 ################################################### Synosept ###################################################
-if sekcja == 'Helituspan':
+if sekcja == 'Synosept':
     st.write(tabs_font_css, unsafe_allow_html=True)
 
     df = st.file_uploader(
