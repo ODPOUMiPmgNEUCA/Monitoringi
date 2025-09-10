@@ -29,7 +29,7 @@ st.set_page_config(page_title='Monitoringi AUTOMATY', layout='wide')
 
 sekcja = st.sidebar.radio(
     'Wybierz monitoring:',
-    ('Cykl Q3','Plastry','Cera+ Panthenol','Standy','Helituspan','Ziołowy sztos')
+    ('Cykl Q3','Plastry','Cera+ Panthenol','Standy','Helituspan','Ziołowy sztos','Synosept')
  )
 
 tabs_font_css = """
@@ -1131,6 +1131,249 @@ if sekcja == 'Helituspan':
     
         # Definiowanie nazwy pliku
         nazwa_pliku = f"FM_HELITUSPAN_{dzisiejsza_data}.xlsx"
+    
+        # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Pobierz nowy plik FORMUŁA MAX',
+            data=excel_file2,
+            file_name=nazwa_pliku,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+
+
+################################################### Synosept ###################################################
+if sekcja == 'Helituspan':
+    st.write(tabs_font_css, unsafe_allow_html=True)
+
+    df = st.file_uploader(
+        label="Wrzuć plik Cykl - Synosept"
+    )
+    
+    if df:
+        # Pobieramy listę dostępnych arkuszy
+        xls = pd.ExcelFile(df)
+        
+        # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
+        if 'Promocje_rabat' in xls.sheet_names:
+            Lr = pd.read_excel(df, sheet_name='Promocje_rabat', skiprows=13, usecols=[1, 2, 10])
+            st.write("Dane z arkusza Promocje_rabat:")
+            st.write(Lr.head())
+
+
+        # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
+        if 'Promocje_gratis' in xls.sheet_names:
+            Lg = pd.read_excel(df, sheet_name='Promocje_gratis', skiprows=14, usecols=[2, 3, 10])
+            st.write("Dane z arkusza Promocje_gratis:")
+            st.write(Lg.head())
+
+
+
+        #usuń braki danych z Kod klienta
+        Lr = Lr.dropna(subset=['KLIENT']) 
+        Lg = Lg.dropna(subset=['KLIENT']) 
+
+        Lg = Lg[~Lg['PAKIET'].str.lower().str.contains('brak')]
+
+        # klient na całkowite
+        Lr['KLIENT'] = Lr['KLIENT'].astype(int)
+        Lg['KLIENT'] = Lg['KLIENT'].astype(int)
+
+
+
+        Lr.columns=['KLIENT','Kod klienta','rabat']
+ 
+        
+        # Dodaj kolumnę 'SIECIOWY', która będzie zawierać 'SIECIOWY' jeśli w kolumnach '12' lub '14' jest słowo 'powiązanie'
+        Lr['SIECIOWY'] = Lr.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['rabat']).lower() else '', axis=1)
+        Lg['SIECIOWY'] = Lg.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['PAKIET']).lower() else '', axis=1)
+
+        Lr['rabat_percent'] = Lr['rabat'].apply(extract_percentage)
+
+        Lg['pakiet'] = Lg['PAKIET'].apply(extract_numbers_as_text)
+        #Lg
+
+        # na zmiennoprzecinkowe
+        Lr['rabat_percent'] = Lr['rabat_percent'].apply(percentage_to_float)
+    
+        # Dodaj nową kolumnę 'max_percent'
+        Lr1 = Lr[Lr['SIECIOWY'] == 'SIECIOWY']
+        Lr2 = Lr[Lr['SIECIOWY'] != 'SIECIOWY']
+        Lr1['max_percent'] = Lr1[['rabat_percent']].max(axis=1)
+        Lr2['max_percent'] = Lr2[['rabat_percent']].max(axis=1)
+        
+        ###### 1 to SIECIOWI, 2 to punkt dostaw
+        Lr1 = Lr1[['KLIENT','Kod klienta','max_percent']]
+        Lr2 = Lr2[['Kod klienta','max_percent']]
+
+
+        Lg1 = Lg[Lg['SIECIOWY'] == 'SIECIOWY']
+        Lg2 = Lg[Lg['SIECIOWY'] != 'SIECIOWY']
+
+        
+        #### p
+        Lg1 = Lg1[['KLIENT','Kod klienta','pakiet']]
+        Lg2 = Lg2[['Kod klienta','pakiet']]
+        
+        stand_lr = Lr2
+        pow_lr = Lr1
+
+        stand_lg = Lg2
+        pow_lg = Lg1
+        
+        #TERAZ IMS
+        ims = st.file_uploader(
+            label = "Wrzuć plik ims_nhd"
+        )
+    
+        if ims:
+            ims = pd.read_excel(ims, usecols=[0,2,19,21])
+            st.write(ims.head())
+    
+        ims = ims[ims['APD_Czy_istnieje_na_rynku']==1]
+        ims = ims[ims['APD_Rodzaj_farmaceutyczny'].isin(['AP - Apteka','ME - Sklep zielarsko - medyczny','PU - Punkt apteczny'])]
+    
+        wynik_df_lr = pd.merge(pow_lr, ims, left_on='KLIENT', right_on='Klient', how='left')
+        wynik_df_lg = pd.merge(pow_lg, ims, left_on='KLIENT', right_on='Klient', how='left')
+    
+        # Wybór potrzebnych kolumn: 'APD_kod_SAP_apteki' i 'max_percent'
+        wynik_df_lr = wynik_df_lr[['KLIENT','APD_kod_SAP_apteki', 'max_percent']]
+        wynik_df_lg = wynik_df_lg[['KLIENT','APD_kod_SAP_apteki', 'pakiet']]
+    
+        #to są kody SAP
+        wynik_df1_lr = wynik_df_lr.rename(columns={'APD_kod_SAP_apteki': 'Kod klienta'})
+        wynik_df1_lr = wynik_df1_lr[['Kod klienta','max_percent']]
+
+        wynik_df1_lg = wynik_df_lg.rename(columns={'APD_kod_SAP_apteki': 'Kod klienta'})
+        wynik_df1_lg = wynik_df1_lg[['Kod klienta','pakiet']]
+
+        #wynik_df1
+    
+        #to są kody powiazan
+        wynik_df2_lr = wynik_df_lr.rename(columns={'KLIENT': 'Kod klienta'})
+        wynik_df2_lr = wynik_df2_lr[['Kod klienta','max_percent']]
+
+        wynik_df2_lg = wynik_df_lg.rename(columns={'KLIENT': 'Kod klienta'})
+        wynik_df2_lg = wynik_df2_lg[['Kod klienta','pakiet']]
+
+        #wynik_df2
+
+        #POŁĄCZYĆ wynik_df z standard_ost
+        polaczone_lr = pd.concat([stand_lr, wynik_df1_lr, wynik_df2_lr], axis = 0)
+
+        polaczone_lg = pd.concat([stand_lg, wynik_df1_lg, wynik_df2_lg], axis = 0)
+  
+        posortowane_lr = polaczone_lr.sort_values(by='max_percent', ascending=False)
+
+        ostatecznie_lr = posortowane_lr.drop_duplicates(subset='Kod klienta')
+        ostatecznie_lr = ostatecznie_lr[ostatecznie_lr['max_percent'] != 0]
+
+
+        ostatecznie_lg = polaczone_lg.drop_duplicates(subset=['Kod klienta', 'pakiet'])
+
+        # ostatecznie_lg
+        
+        st.write('Jeśli to pierwszy monitoring, pobierz ten plik, jeśli nie, wrzuć plik z poprzedniego monitoringu i NIE POBIERAJ TEGO PLIKU')
+        excel_file = io.BytesIO()
+
+        with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
+        # Jeśli dane BRAZOFLAMIN istnieją, zapisz je w odpowiednim arkuszu
+            if 'ostatecznie_lr' in locals():
+                ostatecznie_lr.to_excel(writer, index=False, sheet_name='Promocje_rabat')
+
+            if 'ostatecznie_lg' in locals():
+                ostatecznie_lg.to_excel(writer, index=False, sheet_name='Promocje_gratis')
+
+        excel_file.seek(0)  # Resetowanie wskaźnika do początku pliku
+
+         # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Pobierz, jeśli to pierwszy monitoring',
+            data=excel_file,
+            file_name='czy_dodac.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    
+        # Plik z poprzedniego monitoringu
+        poprzedni = st.file_uploader(
+            label="Wrzuć plik z poprzedniego monitoringu"
+        )
+    
+        if poprzedni:
+            xls = pd.ExcelFile(poprzedni)  # Pobranie pliku z arkuszami
+    
+        # Wczytanie danych z odpowiednich arkuszy
+        if 'Promocje_rabat' in xls.sheet_names:
+            poprzedni_lr = pd.read_excel(poprzedni, sheet_name='Promocje_rabat')
+            st.write('Poprzedni monitoring - Promocje_rabat:')
+            st.write(poprzedni_lr.head())
+
+        if 'Promocje_gratis' in xls.sheet_names:
+            poprzedni_lg = pd.read_excel(poprzedni, sheet_name='Promocje_gratis')
+            st.write('Poprzedni monitoring - Promocje_gratis :')
+            st.write(poprzedni_lg.head())
+
+        # Przetwarzanie 
+        if 'ostatecznie_lr' in locals() and 'poprzedni_lr' in locals():
+            poprzedni_lr = poprzedni_lr.rename(columns={'max_percent': 'old_percent'})
+            result_lr = ostatecznie_lr.merge(poprzedni_lr[['Kod klienta', 'old_percent']], on='Kod klienta', how='left')
+            result_lr['old_percent'] = result_lr['old_percent'].fillna(0)
+            result_lr['Czy dodać'] = result_lr.apply(lambda row: 'DODAJ' if row['max_percent'] > row['old_percent'] else '', axis=1)
+
+        if 'ostatecznie_lg' in locals() and 'poprzedni_lg' in locals():
+            # Zmień nazwę kolumny 'pakiet' na 'old_pakiet' w poprzedni_lg
+            # poprzedni_lg = poprzedni_lg.rename(columns={'pakiet': 'old_pakiet'})
+            # Dodaj poprzedni_lg na dole ostatecznie_lg
+            result_lg = pd.concat([ostatecznie_lg, poprzedni_lg], ignore_index=True)
+            # Usuń duplikaty na podstawie kluczowych kolumn (zachowując pierwsze wystąpienie)
+            result_lg = result_lg.drop_duplicates(subset=['Kod klienta', 'pakiet'], keep='first')
+            # Oznacz nowe wiersze (takie, które nie były w poprzedni_lg)
+            result_lg['Czy dodać'] = result_lg.apply(lambda row: 'DODAJ' if row['Kod klienta'] not in poprzedni_lg['Kod klienta'].values 
+                                                     or row['pakiet'] not in poprzedni_lg['pakiet'].values else '', axis=1)
+
+
+        # Zapisywanie plików do Excela
+        excel_file1 = io.BytesIO()
+        with pd.ExcelWriter(excel_file1, engine='xlsxwriter') as writer:
+            if 'result_lr' in locals():
+                result_lr.to_excel(writer, index=False, sheet_name='Promocje_rabat')
+
+            if 'result_lg' in locals():
+                result_lg.to_excel(writer, index=False, sheet_name='Promocje_gratis')
+
+
+        excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
+
+        # Definiowanie nazwy pliku
+        nazwa_pliku = f"SYNOSEPT_{dzisiejsza_data}.xlsx"
+        # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Kliknij aby pobrać plik z kodami, które kody należy dodać',
+            data=excel_file1,
+            file_name=nazwa_pliku,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+        result_lr = result_lr.drop(columns=['old_percent', 'Czy dodać'])
+        result_lg = result_lg.drop(columns=['Czy dodać'])
+        # result_lg = result_lg.drop(columns=['old_pakiet', 'Czy dodać'])
+
+        st.write('Kliknij, aby pobrać plik z formułą max do następnego monitoringu')
+
+        # Tworzenie pliku Excel w pamięci
+        excel_file2 = io.BytesIO()
+    
+        # Zapis do pliku Excel w pamięci
+        with pd.ExcelWriter(excel_file2, engine='xlsxwriter') as writer:
+            result_lr.to_excel(writer, index=False, sheet_name='Promocje_rabat')
+            result_lg.to_excel(writer, index=False, sheet_name='Promocje_gratis')
+
+
+        # Resetowanie wskaźnika do początku pliku
+        excel_file2.seek(0) 
+    
+        # Definiowanie nazwy pliku
+        nazwa_pliku = f"FM_SYNOSEPT_{dzisiejsza_data}.xlsx"
     
         # Umożliwienie pobrania pliku Excel
         st.download_button(
