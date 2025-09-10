@@ -1558,7 +1558,7 @@ if sekcja == 'Meloxicam':
                 ostatecznie_lg.to_excel(writer, index=False, sheet_name='Promocje_gratis 116878')
 
             if 'ostatecznie_lc' in locals():
-                ostatecznie_lg.to_excel(writer, index=False, sheet_name='Promocje_gratis 116929')
+                ostatecznie_lc.to_excel(writer, index=False, sheet_name='Promocje_gratis 116929')
 
         excel_file.seek(0)  # Resetowanie wskaźnika do początku pliku
 
