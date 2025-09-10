@@ -1163,7 +1163,7 @@ if sekcja == 'Synosept':
 
         # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
         if 'Promocje_gratis' in xls.sheet_names:
-            Lg = pd.read_excel(df, sheet_name='Promocje_gratis', skiprows=14, usecols=[2, 3, 10])
+            Lg = pd.read_excel(df, sheet_name='Promocje_gratis', skiprows=13, usecols=[2, 3, 10])
             st.write("Dane z arkusza Promocje_gratis:")
             st.write(Lg.head())
 
