@@ -1965,7 +1965,7 @@ if sekcja == 'Standy wrzesień-marzec':
         result.to_excel(writer, index=False, sheet_name='Sheet1')
     excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
 
-    nazwa_pliku1 = f"STANDY_{dzisiejsza_data}.xlsx"
+    nazwa_pliku1 = f"STANDY_w-m_{dzisiejsza_data}.xlsx"
     #Umożliwienie pobrania pliku Excel
     st.download_button(
         label='Pobierz',
@@ -1983,7 +1983,7 @@ if sekcja == 'Standy wrzesień-marzec':
         result.to_excel(writer, index=False, sheet_name='Sheet1')
     excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
 
-    nazwa_pliku = f"FM_STANDY_{dzisiejsza_data}.xlsx"
+    nazwa_pliku = f"FM_STANDY_w-m_{dzisiejsza_data}.xlsx"
     # Umożliwienie pobrania pliku Excel
     st.download_button(
         label='Pobierz nowy plik FORMUŁA MAX',
