@@ -29,7 +29,7 @@ st.set_page_config(page_title='Monitoringi AUTOMATY', layout='wide')
 
 sekcja = st.sidebar.radio(
     'Wybierz monitoring:',
-    ('Cera+ Panthenol','Cykl Q3','Cykl Q4','Helituspan','Meloxicam','Plastry','Standy','Standy wrzesień-marzec','Synosept','Synosept Intense','Ziołowy sztos')
+    ('Cera+ Panthenol','Collagen','Cykl Q4','Helituspan','Meloxicam','Plastry','Standy','Standy wrzesień-marzec','Synosept','Synosept Intense','Ziołowy sztos')
  )
 
 tabs_font_css = """
@@ -68,15 +68,15 @@ dzisiejsza_data = datetime.datetime.now().strftime("%d.%m.%Y")
 
 
 
-############################################################################### CYKL Q3  ##############################################################################################
-if sekcja == 'Cykl Q3':
+############################################################################### Collagen  ##############################################################################################
+if sekcja == 'Collagen':
     st.write(tabs_font_css, unsafe_allow_html=True)
 
     df = st.file_uploader(
-    label = "Wrzuć plik Cykl - Cykl Q3"
+    label = "Wrzuć plik Cykl - Collagen"
     )
     if df:
-        df = pd.read_excel(df, sheet_name = 'Promocje na utrzymanie i FUS', skiprows = 15, usecols = [1,2,9,10])
+        df = pd.read_excel(df, sheet_name = 'Promocje_rabat', skiprows = 14, usecols = [1,2,11,12])
         st.write(df.head())
         
         #usuń braki danych z Kod klienta
