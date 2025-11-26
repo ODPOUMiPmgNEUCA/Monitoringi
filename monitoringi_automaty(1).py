@@ -1697,7 +1697,7 @@ if sekcja == 'Synosept Intense':
             xls = pd.ExcelFile(poprzedni)  # Pobranie pliku z arkuszami
     
         # Wczytanie danych z odpowiednich arkuszy
-        if 'Rabty_dla Kasi K.' in xls.sheet_names:
+        if 'Rabaty_dla Kasi K.' in xls.sheet_names:
             poprzedni_lr = pd.read_excel(poprzedni, sheet_name='Rabaty_dla Kasi K.')
             st.write('Poprzedni monitoring - Rabaty_dla Kasi K.:')
             st.write(poprzedni_lr.head())
