@@ -88,10 +88,10 @@ if sekcja == 'Collagen':
     df['Kod klienta'] = df['Kod klienta'].astype(int)
 
     # Zmiana nazw kolumn
-    df = df.rename(columns={'0.12.1': '12', '0.14.1': '14'})
+    #df = df.rename(columns={'0.12.1': '12', '0.14.1': '14'})
 
     #Dodaj kolumnę 'SIECIOWY', która będzie zawierać 'SIECIOWY' jeśli w kolumnach '12' lub '14' jest słowo 'powiązanie'
-    df['SIECIOWY'] = df.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['12']).lower() or 'powiązanie' in str(row['14']).lower() else '', axis=1)
+    df['SIECIOWY'] = df.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['PAKIET']).lower() or 'powiązanie' in str(row['PAKIET.1']).lower() else '', axis=1)
 
     #SPRAWDZENIE CZY DZIAŁA
     #df[df['SIECIOWY'] == 'SIECIOWY']
@@ -99,16 +99,16 @@ if sekcja == 'Collagen':
 
     
     # Zastosowanie funkcji do kolumn '12' i '14'
-    df['12_percent'] = df['12'].apply(extract_percentage)
-    df['14_percent'] = df['14'].apply(extract_percentage)
+    df['P1'] = df['PAKIET'].apply(extract_percentage)
+    df['P2'] = df['PAKIET.1'].apply(extract_percentage)
 
 
     # Konwersja kolumn '12_percent' i '14_percent' na liczby zmiennoprzecinkowe
-    df['12_percent'] = df['12_percent'].apply(percentage_to_float)
-    df['14_percent'] = df['14_percent'].apply(percentage_to_float)
+    df['P1'] = df['P1'].apply(percentage_to_float)
+    df['P2'] = df['P2'].apply(percentage_to_float)
 
     # Dodaj nową kolumnę 'max_percent' z maksymalnymi wartościami z kolumn '12_percent' i '14_percent'
-    df['max_percent'] = df[['12_percent', '14_percent']].max(axis=1)
+    df['max_percent'] = df[['P1', 'P2']].max(axis=1)
 
     # Wybierz wiersze, gdzie 'max_percent' nie jest równa 0
     filtered_df = df[df['max_percent'] != 0]
