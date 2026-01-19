@@ -229,7 +229,7 @@ if sekcja == 'Zimowe wzmocnienie odporności':
         st.write(df.head())
         
         #usuń braki danych z Kod klienta
-    df = df.dropna(subset=['Kod klienta'])
+    df = df.dropna(subset=['Kod SAP'])
 
     # klient na całkowite
     df = df[df['Klient'] != '(puste)']
