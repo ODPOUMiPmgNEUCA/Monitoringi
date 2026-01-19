@@ -93,6 +93,7 @@ if sekcja == 'Ketoprofen':
 
 
         #usuń braki danych z Kod klienta
+        
         Lr = Lr.dropna(subset=['Pakiet']) 
         Lg = Lg.dropna(subset=['Pakiet']) 
 
