@@ -78,14 +78,14 @@ if sekcja == 'Ketoprofen':
         xls = pd.ExcelFile(df)
         
         # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
-        if 'Promocje_rabat' in xls.sheet_names:
+        if 'Rabat' in xls.sheet_names:
             Lr = pd.read_excel(df, sheet_name='Rabat', skiprows=13, usecols=[1, 3, 9])
             st.write("Dane z arkusza Rabat:")
             st.write(Lr.head())
 
 
         # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
-        if 'Promocje_gratis' in xls.sheet_names:
+        if 'Gratis' in xls.sheet_names:
             Lg = pd.read_excel(df, sheet_name='Gratis', skiprows=14, usecols=[1, 3, 9])
             st.write("Dane z arkusza Gratis:")
             st.write(Lg.head())
