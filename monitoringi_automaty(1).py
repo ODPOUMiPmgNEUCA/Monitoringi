@@ -240,7 +240,7 @@ if sekcja == 'Zimowe wzmocnienie odporności':
     #df = df.rename(columns={'0.12.1': '12', '0.14.1': '14'})
 
     #Dodaj kolumnę 'SIECIOWY', która będzie zawierać 'SIECIOWY' jeśli w kolumnach '12' lub '14' jest słowo 'powiązanie'
-    df['SIECIOWY'] = df.apply(lambda row: 'SIECIOWY' if 'Powiązanie' in str(row['Pakiet']).lower() else '', axis=1)
+    df['SIECIOWY'] = df.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['Pakiet']).lower() else '', axis=1)
 
     #SPRAWDZENIE CZY DZIAŁA
     df[df['SIECIOWY'] == 'SIECIOWY']
