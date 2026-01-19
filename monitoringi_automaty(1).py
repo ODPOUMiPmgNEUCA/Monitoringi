@@ -243,7 +243,7 @@ if sekcja == 'Zimowe wzmocnienie odporności':
     df['SIECIOWY'] = df.apply(lambda row: 'SIECIOWY' if 'Powiązanie' in str(row['Pakiet']).lower() else '', axis=1)
 
     #SPRAWDZENIE CZY DZIAŁA
-    #df[df['SIECIOWY'] == 'SIECIOWY']
+    df[df['SIECIOWY'] == 'SIECIOWY']
     #DZIAŁA :)
 
     
