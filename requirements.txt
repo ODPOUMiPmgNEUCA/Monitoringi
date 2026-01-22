@@ -2,13 +2,12 @@ numpy
 pandas
 plotly
 openpyxl
-protobuf
 xlsxwriter
 streamlit
 rich
 markdown-it-py
 pygments
-mdurl
+
 
 
 
