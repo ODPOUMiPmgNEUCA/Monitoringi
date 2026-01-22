@@ -6,7 +6,9 @@ xlsxwriter
 streamlit
 rich
 markdown-it-py
-pygments
+pygment
+altair==4.2.2s
+
 
 
 
