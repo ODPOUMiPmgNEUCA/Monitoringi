@@ -5,6 +5,7 @@ streamlit
 openpyxl
 protobuf
 XlsxWriter
-altair==6.0.0
+altair==4.2.0
 datetime
+
 
