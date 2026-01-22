@@ -24,6 +24,7 @@ import re
 
 
 
+
 st.set_page_config(page_title='Monitoringi AUTOMATY', layout='wide')
 
 
