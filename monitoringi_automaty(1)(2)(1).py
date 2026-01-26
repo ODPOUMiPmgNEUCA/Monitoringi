@@ -751,6 +751,20 @@ if sekcja == 'Zgaginstop':
         
         stand_lgr = Lgr2
         pow_lgr = Lgr1
+
+        OST = (
+            pd.concat(
+                [
+                    Lr[['Klient', 'Kod SAP']],
+                    Lra[['Klient', 'Kod SAP']],
+                    Lg[['Klient', 'Kod SAP']],
+                    Lgr[['Klient', 'Kod SAP']],
+                ],
+                ignore_index=True
+            )
+            .drop_duplicates()
+        )
+
         
         #TERAZ IMS
         ims = st.file_uploader(
@@ -768,6 +782,7 @@ if sekcja == 'Zgaginstop':
         wynik_df_lg = pd.merge(pow_lg, ims, left_on='Klient', right_on='Klient', how='left')
         wynik_df_lra = pd.merge(pow_lra, ims, left_on='Klient', right_on='Klient', how='left')
         wynik_df_lgr = pd.merge(pow_lgr, ims, left_on='Klient', right_on='Klient', how='left')
+        wynik_OST = pd.merge(OST, ims, left_on='Klient', right_on='Klient', how='left')
     
         # Wybór potrzebnych kolumn: 'APD_kod_SAP_apteki' i 'max_percent'
         wynik_df_lr = wynik_df_lr[['Klient','APD_kod_SAP_apteki', 'max_percent']]
@@ -775,6 +790,8 @@ if sekcja == 'Zgaginstop':
 
         wynik_df_lra = wynik_df_lra[['Klient','APD_kod_SAP_apteki', 'max_percent']]
         wynik_df_lgr = wynik_df_lgr[['Klient','APD_kod_SAP_apteki', 'pakiet']]
+
+        wynik_df_OST = wynik_OST[['Klient','APD_kod_SAP_apteki']]
     
         #to są kody SAP
         wynik_df1_lr = wynik_df_lr.rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
@@ -788,6 +805,10 @@ if sekcja == 'Zgaginstop':
 
         wynik_df1_lgr = wynik_df_lgr.rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
         wynik_df1_lgr = wynik_df1_lgr[['Kod SAP','pakiet']]
+
+        wynik_df1_OST = wynik_df_OST.rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
+        wynik_df1_OST = wynik_df1_OST[['Kod SAP','max_percent']]
+
 
         #wynik_df1
     
@@ -804,6 +825,9 @@ if sekcja == 'Zgaginstop':
         wynik_df2_lgr = wynik_df_lgr.rename(columns={'Klient': 'Kod SAP'})
         wynik_df2_lgr = wynik_df2_lgr[['Kod SAP','pakiet']]
 
+        wynik_df2_OST = wynik_df_OST.rename(columns={'Klient': 'Kod SAP'})
+        wynik_df2_OST = wynik_df2_OST[['Kod SAP']]
+
         #wynik_df2
 
         #POŁĄCZYĆ wynik_df z standard_ost
@@ -812,6 +836,7 @@ if sekcja == 'Zgaginstop':
 
         polaczone_lg = pd.concat([stand_lg, wynik_df1_lg, wynik_df2_lg], axis = 0)
         polaczone_lgr = pd.concat([stand_lgr, wynik_df1_lgr, wynik_df2_lgr], axis = 0)
+
   
         posortowane_lr = polaczone_lr.sort_values(by='max_percent', ascending=False)
         posortowane_lra = polaczone_lra.sort_values(by='max_percent', ascending=False)
@@ -826,15 +851,10 @@ if sekcja == 'Zgaginstop':
         ostatecznie_lg = polaczone_lg.drop_duplicates(subset=['Kod SAP', 'pakiet'])
         ostatecznie_lgr = polaczone_lgr.drop_duplicates(subset=['Kod SAP', 'pakiet'])
 
-        OST = pd.concat(
-        [
-        ostatecznie_lr["Kod SAP"],
-        ostatecznie_lra["Kod SAP"],
-        ostatecznie_lg["Kod SAP"],
-        ostatecznie_lgr["Kod SAP"],
-        ],
-        ignore_index=True
-            ).drop_duplicates().to_frame(name="Kod SAP")
+        OST = pd.concat([wynik_df1_OST, wynik_df2_OST], axis = 0)
+
+
+
 
         # ostatecznie_lg
         
