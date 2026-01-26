@@ -851,7 +851,7 @@ if sekcja == 'Zgaginstop':
         ostatecznie_lg = polaczone_lg.drop_duplicates(subset=['Kod SAP', 'pakiet'])
         ostatecznie_lgr = polaczone_lgr.drop_duplicates(subset=['Kod SAP', 'pakiet'])
 
-        OST = pd.concat([wynik_df1_OST, wynik_df2_OST], axis = 0)
+        OST = pd.concat([wynik_df1_OST, wynik_df2_OST], axis=0).drop_duplicates()
 
 
 
