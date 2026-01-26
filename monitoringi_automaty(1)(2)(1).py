@@ -807,7 +807,7 @@ if sekcja == 'Zgaginstop':
         wynik_df1_lgr = wynik_df1_lgr[['Kod SAP','pakiet']]
 
         wynik_df1_OST = wynik_df_OST.rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
-        wynik_df1_OST = wynik_df1_OST[['Kod SAP','max_percent']]
+        wynik_df1_OST = wynik_df1_OST[['Kod SAP']]
 
 
         #wynik_df1
