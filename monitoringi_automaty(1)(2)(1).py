@@ -30,7 +30,7 @@ st.set_page_config(page_title='Monitoringi AUTOMATY', layout='wide')
 
 sekcja = st.sidebar.radio(
     'Wybierz monitoring:',
-    ('Ketoprofen','Oferta sezonowa','Standy wrzesień-marzec','Zgaginstop','Zimowe wzmocnienie odporności','koko')
+    ('Ketoprofen','Oferta sezonowa','Standy wrzesień-marzec','Zgaginstop','Zimowe wzmocnienie odporności')
  )
 
 tabs_font_css = """
