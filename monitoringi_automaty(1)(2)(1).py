@@ -30,7 +30,7 @@ st.set_page_config(page_title='Monitoringi AUTOMATY', layout='wide')
 
 sekcja = st.sidebar.radio(
     'Wybierz monitoring:',
-    ('Ketoprofen','Standy wrzesień-marzec','Zgaginstop','Zimowe wzmocnienie odporności')
+    ('Ketoprofen','Oferta sezonowa','Standy wrzesień-marzec','Zgaginstop','Zimowe wzmocnienie odporności')
  )
 
 tabs_font_css = """
@@ -1023,6 +1023,366 @@ if sekcja == 'Zgaginstop':
             file_name=nazwa_pliku,
             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
+
+
+############################################################################### OFERTA SEZONOWA  ##############################################################################################
+if sekcja == 'Oferta sezonowa':
+    st.write(tabs_font_css, unsafe_allow_html=True)
+
+    df = st.file_uploader(
+        label="Wrzuć plik - Oferta sezonowa"
+    )
+    
+    if df:
+        # Pobieramy listę dostępnych arkuszy
+        xls = pd.ExcelFile(df)
+        
+        # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
+        if 'Rabat' in xls.sheet_names:
+            Lr = pd.read_excel(df, sheet_name='Rabat', skiprows=13, usecols=[1, 3, 9])
+            st.write("Dane z arkusza Rabat:")
+            st.write(Lr.head())
+
+
+        # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
+        if 'Gratis' in xls.sheet_names:
+            Lg = pd.read_excel(df, sheet_name='Gratis', skiprows=7, usecols=[1, 3, 9])
+            st.write("Dane z arkusza Gratis:")
+            st.write(Lg.head())
+
+
+        Lr = Lr.dropna(subset=['Pakiet']) 
+        Lg = Lg.dropna(subset=['Pakiet']) 
+
+        Lg = Lg[~Lg['Pakiet'].str.lower().str.contains('brak')]
+
+        Lr = Lr.dropna(subset=['Klient'])
+        # klient na całkowite
+        Lr['Klient'] = Lr['Klient'].astype(int)
+        Lg['Klient'] = Lg['Klient'].astype(int)
+        Lg['Indeks'] = Lg['Indeks'].astype(int)
+
+
+
+        Lr.columns=['Klient','Kod SAP','Pakiet']
+ 
+        
+        # Dodaj kolumnę 'SIECIOWY', która będzie zawierać 'SIECIOWY' jeśli w kolumnach '12' lub '14' jest słowo 'powiązanie'
+        Lr['SIECIOWY'] = Lr.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['Pakiet']).lower() else '', axis=1)
+        
+
+        Lr['Pakiet'] = Lr['Pakiet'].apply(extract_percentage)
+
+        Lg['pakiet'] = Lg['Pakiet'].apply(extract_numbers_as_text)
+        
+        wykluczone_indeksy = [117792, 123364, 123017]
+        Lg = Lg[~Lg['Indeks'].isin(wykluczone_indeksy)]
+        Lg['SIECIOWY'] = 'SIECIOWY'
+        Lg
+
+        # na zmiennoprzecinkowe
+        Lr['Pakiet'] = Lr['Pakiet'].apply(percentage_to_float)
+    
+        # Dodaj nową kolumnę 'max_percent'
+        Lr1 = Lr[Lr['SIECIOWY'] == 'SIECIOWY']
+        Lr2 = Lr[Lr['SIECIOWY'] != 'SIECIOWY']
+        Lr1['max_percent'] = Lr1[['Pakiet']].max(axis=1)
+        Lr2['max_percent'] = Lr2[['Pakiet']].max(axis=1)
+        
+        ###### 1 to SIECIOWI, 2 to punkt dostaw
+        Lr1 = Lr1[['Klient','Kod SAP','max_percent']]
+        Lr2 = Lr2[['Kod SAP','max_percent']]
+
+        
+        #### p
+        Lg1 = Lg[['Klient','Indeks','pakiet']]
+
+        stand_lr = Lr2
+        pow_lr = Lr1
+
+        pow_lg = Lg1
+        pow_lg['Logiczne'] = pow_lg['Indeks'].astype(str) + '_' + pow_lg['pakiet'].astype(str)
+
+
+        mapa_nielogiczne = {
+        '117226_80+30': '117226_3+2',
+        '117790_80+30': '117790_10+6',
+        '99954_50+20': '99954_5+2',
+        '79580_40+15': '79580_3+1',
+        '99938_40+15': '99938_2+1',
+        '120002_50+15': '120002_4+2',
+        '97047_150+75': '97047_5+2',
+        '97048_100+30': '97048_10+3',
+        '97049_50+15': '97049_10+3',
+        '97050_100+30': '97050_15+8',
+        '97051_100+30': '97051_10+3',
+        '97052_50+15': '97052_5+2',
+        '112551_50+20': '112551_5+2',
+        '112550_50+20': '112550_5+2',
+        '114535_30+10': '114535_3+1',
+        '97072_100+40': '97072_10+4',
+        '97073_100+40': '97073_10+4',
+        '116878_100+40': '116878_5+2',
+        '116929_50+20': '116929_4+2',
+        '70034_30+15': '70034_4+2',
+        '65805_40+15': '65805_5+2',
+        '110155_40+15': '110155_5+2',
+        '97042_300+160': '97042_8+3',
+        '97044_200+110': '97044_8+3',
+        '97045_100+55': '97045_10+3',
+        '74004_30+15': '74004_5+2',
+        '121724_50+20': '121724_10+4',
+        '122696_50+20': '122696_10+4',
+        }
+        
+        pow_lg['Nielogiczne'] = pow_lg['Logiczne'].map(mapa_nielogiczne)
+
+
+        pow_lg
+
+        
+        #TERAZ IMS
+        ims = st.file_uploader(
+            label = "Wrzuć plik ims_nhd"
+        )
+    
+        if ims:
+            ims = pd.read_excel(ims, usecols=[0,2,19,21])
+            st.write(ims.head())
+    
+        ims = ims[ims['APD_Czy_istnieje_na_rynku']==1]
+        ims = ims[ims['APD_Rodzaj_farmaceutyczny'].isin(['AP - Apteka','ME - Sklep zielarsko - medyczny','PU - Punkt apteczny'])]
+    
+        wynik_df_lr = pd.merge(pow_lr, ims, left_on='Klient', right_on='Klient', how='left')
+        
+        wynik_df_lg = pd.merge(pow_lg, ims, left_on='Klient', right_on='Klient', how='left')
+    
+        # Wybór potrzebnych kolumn: 'APD_kod_SAP_apteki' i 'max_percent'
+        wynik_df_lr = wynik_df_lr[['Klient','APD_kod_SAP_apteki', 'max_percent']]
+        wynik_df_lg = wynik_df_lg[['Klient','APD_kod_SAP_apteki', 'Indeks', 'Nielogiczne']]
+    
+        #to są kody SAP
+        wynik_df1_lr = wynik_df_lr.rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
+        wynik_df1_lr = wynik_df1_lr[['Kod SAP','max_percent']]
+
+        wynik_df1_lg = wynik_df_lg.rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
+        wynik_df1_lg = wynik_df1_lg[['Kod SAP','Indeks','Nielogiczne']]
+
+        #wynik_df1
+    
+        #to są kody powiazan
+        wynik_df2_lr = wynik_df_lr.rename(columns={'Klient': 'Kod SAP'})
+        wynik_df2_lr = wynik_df2_lr[['Kod SAP','max_percent']]
+
+        wynik_df2_lg = wynik_df_lg.rename(columns={'Klient': 'Kod SAP'})
+        wynik_df2_lg = wynik_df2_lg[['Kod SAP','Indeks','Nielogiczne']]
+
+        #wynik_df2
+
+        #POŁĄCZYĆ wynik_df z standard_ost
+        polaczone_lr = pd.concat([stand_lr, wynik_df1_lr, wynik_df2_lr], axis = 0)
+
+        polaczone_lg = pd.concat([wynik_df1_lg, wynik_df2_lg], axis = 0)
+  
+        posortowane_lr = polaczone_lr.sort_values(by='max_percent', ascending=False)
+
+        ostatecznie_lr = posortowane_lr.drop_duplicates(subset='Kod SAP')
+        ostatecznie_lr = ostatecznie_lr[ostatecznie_lr['max_percent'] != 0]
+
+
+        ostatecznie_lg = polaczone_lg.drop_duplicates(subset=['Kod SAP', 'Indeks', 'Nielogiczne'])
+
+        grupa_1 = [117226, 117790, 99954, 79580, 99938, 120002, 97047]
+        grupa_2 = [97048, 97049, 97050, 97051, 97052, 112551, 112550]
+        grupa_3 = [114535, 97072, 97073, 116878, 116929, 70034, 65805]
+        grupa_4 = [110155, 97042, 97044, 97045, 74004, 121724, 122696]
+
+
+        pierwszy = ostatecznie_lg[ostatecznie_lg['Indeks'].isin(grupa_1)]
+        drugi = ostatecznie_lg[ostatecznie_lg['Indeks'].isin(grupa_2)]
+        trzeci = ostatecznie_lg[ostatecznie_lg['Indeks'].isin(grupa_3)]
+        czwarty = ostatecznie_lg[ostatecznie_lg['Indeks'].isin(grupa_4)]
+
+
+
+        # ostatecznie_lg
+        
+        st.write('Jeśli to pierwszy monitoring, pobierz ten plik, jeśli nie, wrzuć plik z poprzedniego monitoringu i NIE POBIERAJ TEGO PLIKU')
+        excel_file = io.BytesIO()
+        
+        with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
+        
+            # arkusz bez zmian
+            if 'ostatecznie_lr' in locals():
+                ostatecznie_lr.to_excel(writer, index=False, sheet_name='Rabat')
+        
+            # grupy LG w osobnych arkuszach
+            if 'pierwszy' in locals():
+                pierwszy.to_excel(writer, index=False, sheet_name='pierwszy')
+        
+            if 'drugi' in locals():
+                drugi.to_excel(writer, index=False, sheet_name='drugi')
+        
+            if 'trzeci' in locals():
+                trzeci.to_excel(writer, index=False, sheet_name='trzeci')
+        
+            if 'czwarty' in locals():
+                czwarty.to_excel(writer, index=False, sheet_name='czwarty')
+
+
+        excel_file.seek(0)  # Resetowanie wskaźnika do początku pliku
+
+         # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Pobierz, jeśli to pierwszy monitoring',
+            data=excel_file,
+            file_name='czy_dodac.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+        # Plik z poprzedniego monitoringu 
+        poprzedni = st.file_uploader(label="Wrzuć plik z poprzedniego monitoringu")
+    
+        # Plik z poprzedniego monitoringu
+        if poprzedni:
+            xls = pd.ExcelFile(poprzedni)
+        
+        # Rabat – bez zmian
+        if 'Rabat' in xls.sheet_names:
+            poprzedni_lr = pd.read_excel(poprzedni, sheet_name='Rabat')
+            st.write('Poprzedni monitoring - Rabat:')
+            st.write(poprzedni_lr.head())
+        
+        # Gratis – 4 grupy
+        poprzedni_gratis = {}
+        
+        for nazwa in ['pierwszy', 'drugi', 'trzeci', 'czwarty']:
+            if nazwa in xls.sheet_names:
+                poprzedni_gratis[nazwa] = pd.read_excel(poprzedni, sheet_name=nazwa)
+                st.write(f'Poprzedni monitoring - {nazwa}:')
+                st.write(poprzedni_gratis[nazwa].head())
+
+
+        if 'ostatecznie_lr' in locals() and 'poprzedni_lr' in locals():
+            poprzedni_lr = poprzedni_lr.rename(columns={'max_percent': 'old_percent'})
+            result_lr = ostatecznie_lr.merge(
+                poprzedni_lr[['Kod SAP', 'old_percent']],
+                on='Kod SAP',
+                how='left'
+            )
+            result_lr['old_percent'] = result_lr['old_percent'].fillna(0)
+            result_lr['Czy dodać'] = result_lr.apply(
+                lambda row: 'DODAJ' if row['max_percent'] > row['old_percent'] else '',
+                axis=1
+            )
+
+        wyniki_gratis = {}
+        
+        mapa_grup = {
+            'pierwszy': pierwszy,
+            'drugi': drugi,
+            'trzeci': trzeci,
+            'czwarty': czwarty,
+        }
+
+        
+        for nazwa, df_aktualny in mapa_grup.items():
+        
+            df_poprzedni = poprzedni_gratis.get(nazwa)
+        
+            if df_poprzedni is not None:
+                result = pd.concat([df_aktualny, df_poprzedni], ignore_index=True)
+        
+                result = result.drop_duplicates(
+                    subset=['Kod SAP', 'Indeks','Nielogiczne'],
+                    keep='first'
+                )
+        
+                result['Czy dodać'] = result.apply(
+                    lambda row: 'DODAJ'
+                    if not (
+                        (row['Kod SAP'] in df_poprzedni['Kod SAP'].values)
+                        and (row['Nielogiczne'] in df_poprzedni['Nielogiczne'].values)
+                    )
+                    else '',
+                    axis=1
+                )
+            else:
+                result = df_aktualny.copy()
+                result['Czy dodać'] = 'DODAJ'
+        
+            wyniki_gratis[nazwa] = result
+
+
+        excel_file1 = io.BytesIO()
+        
+        with pd.ExcelWriter(excel_file1, engine='xlsxwriter') as writer:
+        
+            if 'result_lr' in locals():
+                result_lr.to_excel(writer, index=False, sheet_name='Rabat')
+        
+            for nazwa, df in wyniki_gratis.items():
+                df.to_excel(writer, index=False, sheet_name=nazwa)
+
+        excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
+
+        # Definiowanie nazwy pliku
+        nazwa_pliku = f"OFERTA_SEZONOWA_{dzisiejsza_data}.xlsx"
+        # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Kliknij aby pobrać plik z kodami, które kody należy dodać',
+            data=excel_file1,
+            file_name=nazwa_pliku,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+
+
+####################################### TU SKONCZYŁAM
+
+
+
+
+        # Rabat – bez zmian
+        result_lr = result_lr.drop(columns=['old_percent', 'Czy dodać'], errors='ignore')
+        
+        # Gratis – każda grupa osobno
+        for nazwa in wyniki_gratis:
+            wyniki_gratis[nazwa] = wyniki_gratis[nazwa].drop(
+                columns=['Czy dodać'],
+                errors='ignore'
+            )
+
+
+        st.write('Kliknij, aby pobrać plik z formułą max do następnego monitoringu')
+
+
+        excel_file2 = io.BytesIO()
+
+        with pd.ExcelWriter(excel_file2, engine='xlsxwriter') as writer:
+        
+            # Rabat
+            result_lr.to_excel(writer, index=False, sheet_name='Rabat')
+        
+            # Gratis – 4 arkusze
+            for nazwa, df in wyniki_gratis.items():
+                df.to_excel(writer, index=False, sheet_name=nazwa)
+
+
+        excel_file2.seek(0)
+        
+        nazwa_pliku = f"FM_OFERTA_SEZONOWA_{dzisiejsza_data}.xlsx"
+        
+        st.download_button(
+            label='Pobierz nowy plik FORMUŁA MAX',
+            data=excel_file2,
+            file_name=nazwa_pliku,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+
+
+
 
 
 
