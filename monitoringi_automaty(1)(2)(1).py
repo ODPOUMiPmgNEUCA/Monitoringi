@@ -30,7 +30,7 @@ st.set_page_config(page_title='Monitoringi AUTOMATY', layout='wide')
 
 sekcja = st.sidebar.radio(
     'Wybierz monitoring:',
-    ('Ketoprofen','Oferta sezonowa','Standy wrzesień-marzec','Zgaginstop','Zimowe wzmocnienie odporności')
+    ('Alergia','Ketoprofen','Musy','Oferta sezonowa','Plastry','Standy wrzesień-marzec','Zgaginstop','Zimowe wzmocnienie odporności')
  )
 
 tabs_font_css = """
@@ -1381,7 +1381,566 @@ if sekcja == 'Oferta sezonowa':
         )
 
 
+############################################################################### MUSY ##############################################################################################
+if sekcja == 'Musy':
+    st.write(tabs_font_css, unsafe_allow_html=True)
 
+    df = st.file_uploader(
+    label = "Wrzuć plik - Musy"
+    )
+    if df:
+        df = pd.read_excel(df, sheet_name = 'Rabat', skiprows = 12, usecols = [1,3,9])
+        st.write(df.head())
+        
+        #usuń braki danych z Kod klienta
+    df = df.dropna(subset=['Kod SAP'])
+
+    # klient na całkowite
+    df = df[df['Klient'] != '(puste)']
+    df['Klient'] = df['Klient'].astype(int)
+    df['Kod SAP'] = df['Kod SAP'].astype(int)
+
+    # Zmiana nazw kolumn
+    #df = df.rename(columns={'0.12.1': '12', '0.14.1': '14'})
+
+    #Dodaj kolumnę 'SIECIOWY', która będzie zawierać 'SIECIOWY' jeśli w kolumnach '12' lub '14' jest słowo 'powiązanie'
+    df['SIECIOWY'] = df.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['Pakiet']).lower() else '', axis=1)
+
+    #SPRAWDZENIE CZY DZIAŁA
+    df[df['SIECIOWY'] == 'SIECIOWY']
+    #DZIAŁA :)
+
+    
+    # Zastosowanie funkcji do kolumn '12' i '14'
+    df['Pakiet'] = df['Pakiet'].apply(extract_percentage)
+    #df['14_percent'] = df['14'].apply(extract_percentage)
+
+
+    # Konwersja kolumn '12_percent' i '14_percent' na liczby zmiennoprzecinkowe
+    df['Pakiet'] = df['Pakiet'].apply(percentage_to_float)
+    #df['14_percent'] = df['14_percent'].apply(percentage_to_float)
+
+    # Dodaj nową kolumnę 'max_percent' z maksymalnymi wartościami z kolumn '12_percent' i '14_percent'
+    df['max_percent'] = df[['Pakiet']].max(axis=1)
+
+    # Wybierz wiersze, gdzie 'max_percent' nie jest równa 0
+    filtered_df = df[df['max_percent'] != 0]
+
+    standard = filtered_df[filtered_df['SIECIOWY'] != 'SIECIOWY']
+    powiazanie = filtered_df[filtered_df['SIECIOWY'] == 'SIECIOWY']
+
+    #len(standard), len(powiazanie), len(filtered_df)
+
+    standard_ost = standard[['Kod SAP', 'max_percent']]
+
+    powiazanie = powiazanie[['Klient','Kod SAP','max_percent']]
+
+
+    #TERAZ IMS
+    ims = st.file_uploader(
+        label = "Wrzuć plik ims_nhd"
+    )
+
+    if ims:
+        ims = pd.read_excel(ims, usecols=[0,2,19,21])
+        st.write(ims.head())
+
+    ims = ims[ims['APD_Czy_istnieje_na_rynku']==1]
+    ims = ims[ims['APD_Rodzaj_farmaceutyczny'].isin(['AP - Apteka','ME - Sklep zielarsko - medyczny','PU - Punkt apteczny'])]
+
+    wynik_df = pd.merge(powiazanie, ims, left_on='Klient', right_on='Klient', how='left')
+
+    #Wybór potrzebnych kolumn: 'APD_kod_SAP_apteki' i 'max_percent'
+    wynik_df = wynik_df[['Klient','APD_kod_SAP_apteki', 'max_percent']]
+
+
+    #to są kody SAP
+    wynik_df1 = wynik_df.rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
+    wynik_df1 = wynik_df1[['Kod SAP','max_percent']]
+    #wynik_df1
+
+    #to są kody powiazan
+    wynik_df2 = wynik_df.rename(columns={'Klient': 'Kod SAP'})
+    wynik_df2 = wynik_df2[['Kod SAP','max_percent']]
+    #wynik_df2
+
+    #POŁĄCZYĆ wynik_df z standard_ost
+    polaczone = pd.concat([standard_ost, wynik_df1, wynik_df2], axis = 0)
+  
+    posortowane = polaczone.sort_values(by='max_percent', ascending=False)
+
+    ostatecznie = posortowane.drop_duplicates(subset='Kod SAP')
+
+
+    st.write('Jeśli to pierwszy monitoring, pobierz ten plik, jeśli nie, wrzuć plik z poprzedniego monitoringu i NIE POBIERAJ TEGO PLIKU')
+    excel_file = io.BytesIO()
+    with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
+        ostatecznie.to_excel(writer, index=False, sheet_name='Sheet1')
+    excel_file.seek(0)  # Resetowanie wskaźnika do początku pliku
+
+    # Umożliwienie pobrania pliku Excel
+    st.download_button(
+        label='Pobierz, jeśli to pierwszy monitoring',
+        data=excel_file,
+        file_name='czy_dodac.xlsx',
+        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+    #plik z poprzedniego monitoringu
+    poprzedni = st.file_uploader(
+        label = "Wrzuć plik z poprzedniego monitoringu"
+    )
+
+    if poprzedni:
+        poprzedni = pd.read_excel(poprzedni)
+        st.write(poprzedni.head())
+
+    poprzedni = poprzedni.rename(columns={'max_percent': 'old_percent'})
+    # Wykonanie left join, dodanie 'old_percent' do pliku 'ostatecznie'
+    result = ostatecznie.merge(poprzedni[['Kod SAP', 'old_percent']], on='Kod SAP', how='left')
+    result['old_percent'] = result['old_percent'].fillna(0)
+    result['Czy dodać'] = result.apply(lambda row: 'DODAJ' if row['max_percent'] > row['old_percent'] else '', axis=1)
+    st.write('Kliknij aby pobrać plik z kodami, które kody należy dodać')
+
+    excel_file1 = io.BytesIO()
+    with pd.ExcelWriter(excel_file1, engine='xlsxwriter') as writer:
+        result.to_excel(writer, index=False, sheet_name='Sheet1')
+    excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
+
+    nazwa_pliku1 = f"Musy_{dzisiejsza_data}.xlsx"
+    #Umożliwienie pobrania pliku Excel
+    st.download_button(
+        label='Pobierz',
+        data=excel_file1,
+        file_name=nazwa_pliku1,
+        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+    result = result.drop(columns=['old_percent', 'Czy dodać'])
+
+
+    st.write('Kliknij, aby pobrać plik z formułą max do następnego monitoringu')
+    excel_file2 = io.BytesIO()
+    with pd.ExcelWriter(excel_file2, engine='xlsxwriter') as writer:
+        result.to_excel(writer, index=False, sheet_name='Sheet1')
+    excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
+
+    nazwa_pliku = f"FM_Musy_{dzisiejsza_data}.xlsx"
+    # Umożliwienie pobrania pliku Excel
+    st.download_button(
+        label='Pobierz nowy plik FORMUŁA MAX',
+        data=excel_file2,
+        file_name = nazwa_pliku,
+        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+
+
+################################################### ALERGIA ###################################################
+
+# wszystkie arkusze razem, rabaty, gratisy, wynikowy jeden (jeśli klient kupi cokolwiek jest dodawany do promocji)
+if sekcja == 'Alergia':
+    st.write(tabs_font_css, unsafe_allow_html=True)
+
+    df = st.file_uploader(
+        label="Wrzuć plik - Alergia"
+    )
+    
+    if df:
+        # Pobieramy listę dostępnych arkuszy
+        xls = pd.ExcelFile(df)
+        
+        # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
+        if 'Rabat CETOALERGEDD' in xls.sheet_names:
+            Lr = pd.read_excel(df, sheet_name='Rabat CETOALERGEDD', skiprows=13, usecols=[1, 3, 9])
+            st.write("Dane z arkusza Rabat CETOALERGEDD:")
+            st.write(Lr.head())
+            
+        if 'Rabat LEVALERGEDD' in xls.sheet_names:
+            Lr1 = pd.read_excel(df, sheet_name='Rabat LEVALERGEDD', skiprows=13, usecols=[1, 3, 9])
+            st.write("Dane z arkusza Rabat LEVALERGEDD:")
+            st.write(Lr1.head())
+
+
+        # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
+        if 'Gratis CETOALERGEDD' in xls.sheet_names:
+            Lg = pd.read_excel(df, sheet_name='Gratis CETOALERGEDD', skiprows=14, usecols=[1, 3, 9])
+            st.write("Dane z arkusza Gratis CETOALERGEDD:")
+            st.write(Lg.head())
+
+        if 'Gratis LEVALERGEDD' in xls.sheet_names:
+            Lg1 = pd.read_excel(df, sheet_name='Gratis LEVALERGEDD', skiprows=14, usecols=[1, 3, 9])
+            st.write("Dane z arkusza Gratis LEVALERGEDD:")
+            st.write(Lg1.head())
+
+
+        Lr = pd.concat([Lr, Lr1, Lg, Lg1], axis=0, ignore_index=True)
+
+
+        #usuń braki danych z Kod klienta
+        
+        Lr = Lr.dropna(subset=['Pakiet']) 
+        Lr = Lr[~Lr['Pakiet'].str.lower().str.contains('brak')]
+
+        Lr = Lr.dropna(subset=['Klient'])
+        # klient na całkowite
+        Lr['Klient'] = Lr['Klient'].astype(int)
+
+        Lr.columns=['Klient','Kod SAP','Pakiet']
+ 
+        
+        # Dodaj kolumnę 'SIECIOWY', która będzie zawierać 'SIECIOWY' jeśli w kolumnach '12' lub '14' jest słowo 'powiązanie'
+        Lr['SIECIOWY'] = Lr.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['Pakiet']).lower() else '', axis=1)
+  
+        #Lr['Pakiet'] = Lr['Pakiet'].apply(extract_percentage)
+
+        #Lg
+
+        # na zmiennoprzecinkowe
+        #Lr['Pakiet'] = Lr['Pakiet'].apply(percentage_to_float)
+    
+        # Dodaj nową kolumnę 'max_percent'
+        Lr1 = Lr[Lr['SIECIOWY'] == 'SIECIOWY']
+        Lr2 = Lr[Lr['SIECIOWY'] != 'SIECIOWY']
+ 
+        ###### 1 to SIECIOWI, 2 to punkt dostaw
+        Lr1 = Lr1[['Klient','Kod SAP']]
+        Lr2 = Lr2[['Kod SAP']]
+
+        #### p
+
+        
+        stand_lr = Lr2
+        pow_lr = Lr1
+
+        
+        #TERAZ IMS
+        ims = st.file_uploader(
+            label = "Wrzuć plik ims_nhd"
+        )
+    
+        if ims:
+            ims = pd.read_excel(ims, usecols=[0,2,19,21])
+            st.write(ims.head())
+    
+        ims = ims[ims['APD_Czy_istnieje_na_rynku']==1]
+        ims = ims[ims['APD_Rodzaj_farmaceutyczny'].isin(['AP - Apteka','ME - Sklep zielarsko - medyczny','PU - Punkt apteczny'])]
+    
+        wynik_df_lr = pd.merge(pow_lr, ims, left_on='Klient', right_on='Klient', how='left')
+        #wynik_df_lg = pd.merge(pow_lg, ims, left_on='Klient', right_on='Klient', how='left')
+    
+        # Wybór potrzebnych kolumn: 'APD_kod_SAP_apteki' i 'max_percent'
+        wynik_df_lr = wynik_df_lr[['Klient','APD_kod_SAP_apteki']]
+        #wynik_df_lg = wynik_df_lg[['Klient','APD_kod_SAP_apteki', 'pakiet']]
+    
+        #to są kody SAP
+        wynik_df1_lr = wynik_df_lr.rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
+        wynik_df1_lr = wynik_df1_lr[['Kod SAP']]
+
+        #wynik_df1_lg = wynik_df_lg.rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
+        #wynik_df1_lg = wynik_df1_lg[['Kod SAP','pakiet']]
+
+        #wynik_df1
+    
+        #to są kody powiazan
+        wynik_df2_lr = wynik_df_lr.rename(columns={'Klient': 'Kod SAP'})
+        wynik_df2_lr = wynik_df2_lr[['Kod SAP']]
+
+        #wynik_df2_lg = wynik_df_lg.rename(columns={'Klient': 'Kod SAP'})
+        #wynik_df2_lg = wynik_df2_lg[['Kod SAP','pakiet']]
+
+        #wynik_df2
+
+        #POŁĄCZYĆ wynik_df z standard_ost
+        polaczone_lr = pd.concat([stand_lr, wynik_df1_lr, wynik_df2_lr], axis = 0)
+
+        #polaczone_lg = pd.concat([stand_lg, wynik_df1_lg, wynik_df2_lg], axis = 0)
+  
+        #posortowane_lr = polaczone_lr.sort_values(by='max_percent', ascending=False)
+
+        ostatecznie_lr = polaczone_lr.drop_duplicates(subset='Kod SAP')
+        #ostatecznie_lr = ostatecznie_lr[ostatecznie_lr['max_percent'] != 0]
+
+
+        #ostatecznie_lg = polaczone_lg.drop_duplicates(subset=['Kod SAP', 'pakiet'])
+
+        # ostatecznie_lg
+        
+        st.write('Jeśli to pierwszy monitoring, pobierz ten plik, jeśli nie, wrzuć plik z poprzedniego monitoringu i NIE POBIERAJ TEGO PLIKU')
+        excel_file = io.BytesIO()
+
+        with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
+        # Jeśli dane BRAZOFLAMIN istnieją, zapisz je w odpowiednim arkuszu
+            if 'ostatecznie_lr' in locals():
+                ostatecznie_lr.to_excel(writer, index=False, sheet_name = "Polaczone")
+
+        excel_file.seek(0)  # Resetowanie wskaźnika do początku pliku
+
+         # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Pobierz, jeśli to pierwszy monitoring',
+            data=excel_file,
+            file_name='czy_dodac.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    
+        # Plik z poprzedniego monitoringu
+        poprzedni = st.file_uploader(
+            label="Wrzuć plik z poprzedniego monitoringu"
+        )
+    
+        if poprzedni:
+            xls = pd.ExcelFile(poprzedni)  # Pobranie pliku z arkuszami
+    
+        # Wczytanie danych z odpowiednich arkuszy
+        if 'Polaczone' in xls.sheet_names:
+            poprzedni_lr = pd.read_excel(poprzedni, sheet_name = 'Polaczone')
+            st.write('Poprzedni monitoring - Polaczone:')
+            st.write(poprzedni_lr.head())
+
+        # Przetwarzanie
+        if 'ostatecznie_lr' in locals() and 'poprzedni_lr' in locals():
+            # Tworzymy set dla szybkiego sprawdzania, które kody były wcześniej
+            stare_kody = set(poprzedni_lr['Kod SAP'])
+            
+            # Dodajemy kolumnę 'Czy dodać' tylko na podstawie obecności kodu
+            result_lr = ostatecznie_lr.copy()
+            result_lr['Czy dodać'] = result_lr['Kod SAP'].apply(
+                lambda x: 'DODAJ' if x not in stare_kody else ''
+            )
+
+
+
+        # Zapisywanie plików do Excela
+        excel_file1 = io.BytesIO()
+        with pd.ExcelWriter(excel_file1, engine='xlsxwriter') as writer:
+            if 'result_lr' in locals():
+                result_lr.to_excel(writer, index=False, sheet_name='Polaczone')
+
+        excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
+
+        # Definiowanie nazwy pliku
+        nazwa_pliku = f"ALERGIA_{dzisiejsza_data}.xlsx"
+        # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Kliknij aby pobrać plik z kodami, które kody należy dodać',
+            data=excel_file1,
+            file_name=nazwa_pliku,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+        result_lr = result_lr.drop(columns=['Czy dodać'])
+        # result_lg = result_lg.drop(columns=['old_pakiet', 'Czy dodać'])
+
+        st.write('Kliknij, aby pobrać plik z formułą max do następnego monitoringu')
+
+        # Tworzenie pliku Excel w pamięci
+        excel_file2 = io.BytesIO()
+    
+        # Zapis do pliku Excel w pamięci
+        with pd.ExcelWriter(excel_file2, engine='xlsxwriter') as writer:
+            result_lr.to_excel(writer, index=False, sheet_name='Polaczone')
+
+
+        # Resetowanie wskaźnika do początku pliku
+        excel_file2.seek(0) 
+    
+        # Definiowanie nazwy pliku
+        nazwa_pliku = f"FM_ALERGIA_{dzisiejsza_data}.xlsx"
+    
+        # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Pobierz nowy plik FORMUŁA MAX',
+            data=excel_file2,
+            file_name=nazwa_pliku,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+
+############################################################################### PLASTRY ##############################################################################################
+if sekcja == 'Plastry':
+    st.write(tabs_font_css, unsafe_allow_html=True)
+
+    df = st.file_uploader(
+    label = "Wrzuć plik - Plastry"
+    )
+    
+    if df:
+        # Pobieramy listę dostępnych arkuszy
+        xls = pd.ExcelFile(df)
+        
+        # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
+        if 'Rabat_PD' in xls.sheet_names:
+            R1 = pd.read_excel(df, sheet_name='Rabat_PD', skiprows=11, usecols=[1, 3, 9])
+            st.write("Dane z arkusza Rabat_PD:")
+            st.write(R1.head())
+            
+        if 'Rabat_powiązanie' in xls.sheet_names:
+            R2 = pd.read_excel(df, sheet_name='Rabat_powiązanie', skiprows=9, usecols=[1, 3, 9])
+            st.write("Dane z arkusza Rabat_powiązanie:")
+            st.write(R2.head())
+
+        if 'Rabat, gaza_PD' in xls.sheet_names:
+            R3 = pd.read_excel(df, sheet_name='Rabat, gaza_PD', skiprows=9, usecols=[1, 3, 9])
+            st.write("Dane z arkusza Rabat, gaza_PD:")
+            st.write(R3.head())
+            
+        if 'Rabat, gaza_powiązanie' in xls.sheet_names:
+            R4 = pd.read_excel(df, sheet_name='Rabat, gaza_powiązanie', skiprows=9, usecols=[1, 3, 9])
+            st.write("Dane z arkusza Rabat, gaza_powiązanie:")
+            st.write(R4.head())
+
+        if 'Rabat, ekspozytor' in xls.sheet_names:
+            R5 = pd.read_excel(df, sheet_name='Rabat, ekspozytor', skiprows=12, usecols=[1, 3, 10])
+            st.write("Dane z arkusza Rabat, ekspozytor:")
+            st.write(R5.head())
+
+        df = pd.concat([R1,R2,R3,R4,R5], axis=0, ignore_index=True)
+        
+        #usuń braki danych z Kod klienta
+        df = df.dropna(subset=['Kod SAP'])
+    
+        # klient na całkowite
+        df = df[df['Klient'] != '(puste)']
+        df['Klient'] = df['Klient'].astype(int)
+        df['Kod SAP'] = df['Kod SAP'].astype(int)
+    
+        # Zmiana nazw kolumn
+        #df = df.rename(columns={'0.12.1': '12', '0.14.1': '14'})
+    
+        #Dodaj kolumnę 'SIECIOWY', która będzie zawierać 'SIECIOWY' jeśli w kolumnach '12' lub '14' jest słowo 'powiązanie'
+        df['SIECIOWY'] = df.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['Pakiet']).lower() else '', axis=1)
+    
+        #SPRAWDZENIE CZY DZIAŁA
+        df[df['SIECIOWY'] == 'SIECIOWY']
+        #DZIAŁA :)
+    
+        
+        # Zastosowanie funkcji do kolumn '12' i '14'
+        df['Pakiet'] = df['Pakiet'].apply(extract_percentage)
+        #df['14_percent'] = df['14'].apply(extract_percentage)
+    
+    
+        # Konwersja kolumn '12_percent' i '14_percent' na liczby zmiennoprzecinkowe
+        df['Pakiet'] = df['Pakiet'].apply(percentage_to_float)
+        #df['14_percent'] = df['14_percent'].apply(percentage_to_float)
+    
+        # Dodaj nową kolumnę 'max_percent' z maksymalnymi wartościami z kolumn '12_percent' i '14_percent'
+        df['max_percent'] = df[['Pakiet']].max(axis=1)
+    
+        # Wybierz wiersze, gdzie 'max_percent' nie jest równa 0
+        filtered_df = df[df['Pakiet'] != 0]
+    
+        standard = filtered_df[filtered_df['SIECIOWY'] != 'SIECIOWY']
+        powiazanie = filtered_df[filtered_df['SIECIOWY'] == 'SIECIOWY']
+    
+        #len(standard), len(powiazanie), len(filtered_df)
+    
+        standard_ost = standard[['Kod SAP', 'max_percent']]
+    
+        powiazanie = powiazanie[['Klient','Kod SAP','max_percent']]
+    
+    
+        #TERAZ IMS
+        ims = st.file_uploader(
+            label = "Wrzuć plik ims_nhd"
+        )
+    
+        if ims:
+            ims = pd.read_excel(ims, usecols=[0,2,19,21])
+            st.write(ims.head())
+    
+        ims = ims[ims['APD_Czy_istnieje_na_rynku']==1]
+        ims = ims[ims['APD_Rodzaj_farmaceutyczny'].isin(['AP - Apteka','ME - Sklep zielarsko - medyczny','PU - Punkt apteczny'])]
+    
+        wynik_df = pd.merge(powiazanie, ims, left_on='Klient', right_on='Klient', how='left')
+    
+        #Wybór potrzebnych kolumn: 'APD_kod_SAP_apteki' i 'max_percent'
+        wynik_df = wynik_df[['Klient','APD_kod_SAP_apteki', 'max_percent']]
+    
+    
+        #to są kody SAP
+        wynik_df1 = wynik_df.rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
+        wynik_df1 = wynik_df1[['Kod SAP','max_percent']]
+        #wynik_df1
+    
+        #to są kody powiazan
+        wynik_df2 = wynik_df.rename(columns={'Klient': 'Kod SAP'})
+        wynik_df2 = wynik_df2[['Kod SAP','max_percent']]
+        #wynik_df2
+    
+        #POŁĄCZYĆ wynik_df z standard_ost
+        polaczone = pd.concat([standard_ost, wynik_df1, wynik_df2], axis = 0)
+      
+        posortowane = polaczone.sort_values(by='max_percent', ascending=False)
+    
+        ostatecznie = posortowane.drop_duplicates(subset=['Kod SAP','max_percent'])
+    
+    
+        st.write('Jeśli to pierwszy monitoring, pobierz ten plik, jeśli nie, wrzuć plik z poprzedniego monitoringu i NIE POBIERAJ TEGO PLIKU')
+        excel_file = io.BytesIO()
+        with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
+            ostatecznie.to_excel(writer, index=False, sheet_name='Sheet1')
+        excel_file.seek(0)  # Resetowanie wskaźnika do początku pliku
+    
+        # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Pobierz, jeśli to pierwszy monitoring',
+            data=excel_file,
+            file_name='czy_dodac.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    
+        #plik z poprzedniego monitoringu
+        poprzedni = st.file_uploader(
+            label = "Wrzuć plik z poprzedniego monitoringu"
+        )
+    
+        if poprzedni:
+            poprzedni = pd.read_excel(poprzedni)
+            st.write(poprzedni.head())
+    
+        poprzedni = poprzedni.rename(columns={'max_percent': 'old_percent'})
+        # Wykonanie left join, dodanie 'old_percent' do pliku 'ostatecznie'
+        result = ostatecznie.merge(poprzedni[['Kod SAP', 'old_percent']], on='Kod SAP', how='left')
+        result['old_percent'] = result['old_percent'].fillna(0)
+        result['Czy dodać'] = result.apply(lambda row: 'DODAJ' if row['max_percent'] > row['old_percent'] else '', axis=1)
+        st.write('Kliknij aby pobrać plik z kodami, które kody należy dodać')
+    
+        excel_file1 = io.BytesIO()
+        with pd.ExcelWriter(excel_file1, engine='xlsxwriter') as writer:
+            result.to_excel(writer, index=False, sheet_name='Sheet1')
+        excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
+    
+        nazwa_pliku1 = f"Plastry_{dzisiejsza_data}.xlsx"
+        #Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Pobierz',
+            data=excel_file1,
+            file_name=nazwa_pliku1,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    
+        result = result.drop(columns=['old_percent', 'Czy dodać'])
+    
+    
+        st.write('Kliknij, aby pobrać plik z formułą max do następnego monitoringu')
+        excel_file2 = io.BytesIO()
+        with pd.ExcelWriter(excel_file2, engine='xlsxwriter') as writer:
+            result.to_excel(writer, index=False, sheet_name='Sheet1')
+        excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
+    
+        nazwa_pliku = f"FM_Plastry_{dzisiejsza_data}.xlsx"
+        # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Pobierz nowy plik FORMUŁA MAX',
+            data=excel_file2,
+            file_name = nazwa_pliku,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    
+    
+   
 
 
 
