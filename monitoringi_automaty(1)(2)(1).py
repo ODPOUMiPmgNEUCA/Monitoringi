@@ -30,7 +30,7 @@ st.set_page_config(page_title='Monitoringi AUTOMATY', layout='wide')
 
 sekcja = st.sidebar.radio(
     'Wybierz monitoring:',
-    ('Alergia','Cera+','Ketoprofen','Musy','Oferta sezonowa','Standy wrzesień-marzec','Panthenol', 'Plastry','Symetykon', 'Zimowe wzmocnienie odporności','Zgaginstop')
+    ('Alergia','Cera+','Ketoprofen','Musy','Oferta sezonowa','Panthenol', 'Plastry','Standy wrzesień-marzec','Symetykon', 'Zimowe wzmocnienie odporności','Zgaginstop')
  )
 
 tabs_font_css = """
