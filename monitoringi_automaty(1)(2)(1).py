@@ -1575,6 +1575,8 @@ if sekcja == 'Alergia':
 
 
         Lr = pd.concat([Lr, Lr1, Lg, Lg1], axis=0, ignore_index=True)
+        
+        Lr = Lr[Lr['Klient'] != "(puste)"]
 
 
         #usuń braki danych z Kod klienta
