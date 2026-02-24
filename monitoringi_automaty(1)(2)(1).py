@@ -664,9 +664,13 @@ if sekcja == 'Zgaginstop':
         #usuń braki danych z Kod klienta
         
         Lr = Lr.dropna(subset=['Pakiet']) 
+        Lr = Lr[Lr['Klient'] != "(puste)"]
         Lg = Lg.dropna(subset=['Pakiet']) 
+        Lg = Lg[Lg['Klient'] != "(puste)"]
         Lra = Lra.dropna(subset=['Pakiet']) 
+        Lra = Lra[Lra['Klient'] != "(puste)"]
         Lgr = Lgr.dropna(subset=['Pakiet']) 
+        Lgr = Lgr[Lgr['Klient'] != "(puste)"]
 
         Lg = Lg[~Lg['Pakiet'].str.lower().str.contains('brak')]
         Lgr = Lgr[~Lgr['Pakiet'].str.lower().str.contains('brak')]
