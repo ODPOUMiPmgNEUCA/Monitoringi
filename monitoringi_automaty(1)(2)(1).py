@@ -1908,10 +1908,12 @@ if sekcja == 'Plastry':
     
         poprzedni = poprzedni.rename(columns={'max_percent': 'old_percent'})
         # Wykonanie left join, dodanie 'old_percent' do pliku 'ostatecznie'
-        result = ostatecznie.merge(poprzedni[['Kod SAP', 'old_percent']], on='Kod SAP', how='left')
+        result = ostatecznie.merge(poprzedni[['Kod SAP', 'old_percent']], left_on=['Kod SAP', 'max_percent'], right_on=['Kod SAP', 'old_percent'], how='left', indicator=True)
         result['old_percent'] = result['old_percent'].fillna(0)
-        result['Czy dodać'] = result.apply(lambda row: 'DODAJ' if row['max_percent'] > row['old_percent'] else '', axis=1)
-        result = result.drop_duplicates(subset=['Kod SAP','max_percent','old_percent','Czy dodać'])
+        result['Czy dodać'] = result['_merge'].apply(lambda x: 'DODAJ' if x == 'left_only' else '')
+        #result['Czy dodać'] = result.apply(lambda row: 'DODAJ' if row['max_percent'] > row['old_percent'] else '', axis=1)
+        #result = result.drop_duplicates(subset=['Kod SAP','max_percent','old_percent','Czy dodać'])
+        result = result.drop(columns=['old_percent', '_merge'])
         st.write('Kliknij aby pobrać plik z kodami, które kody należy dodać')
     
         excel_file1 = io.BytesIO()
