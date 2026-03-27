@@ -1930,7 +1930,7 @@ if sekcja == 'Plastry':
             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
     
-        result = result.drop(columns=['old_percent', 'Czy dodać'])
+        result = result.drop(columns=['Czy dodać'])
     
     
         st.write('Kliknij, aby pobrać plik z formułą max do następnego monitoringu')
