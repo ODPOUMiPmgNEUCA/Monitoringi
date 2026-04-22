@@ -2117,6 +2117,7 @@ if sekcja == 'Cera+':
     df = df.dropna(subset=['Kod SAP'])
 
     # klient na całkowite
+    df = df[df['Klient'] != '(puste)']
     df['Klient'] = df['Klient'].astype(int)
     df['Kod SAP'] = df['Kod SAP'].astype(int)
 
