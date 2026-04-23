@@ -208,7 +208,7 @@ if sekcja == 'Ibunoven':
 
         ostatecznie_lr = posortowane_lr.drop_duplicates(subset='Kod SAP')
         ostatecznie_lr = ostatecznie_lr[ostatecznie_lr['max_percent'] != 0]
-        ostatecznie_lr["pakiet"] = ostatecznie_lr["max_percent"]
+        ostatecznie_lr = ostatecznie_lr.rename(columns={"max_percent": "pakiet"})
 
 
         ostatecznie_lg = polaczone_lg.drop_duplicates(subset=['Kod SAP', 'pakiet'])
