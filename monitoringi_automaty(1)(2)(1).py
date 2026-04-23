@@ -208,9 +208,14 @@ if sekcja == 'Ibunoven':
 
         ostatecznie_lr = posortowane_lr.drop_duplicates(subset='Kod SAP')
         ostatecznie_lr = ostatecznie_lr[ostatecznie_lr['max_percent'] != 0]
+        ostatecznie_lr["pakiet"] = ostatecznie_lr["max_percent"]
 
 
         ostatecznie_lg = polaczone_lg.drop_duplicates(subset=['Kod SAP', 'pakiet'])
+
+        ostatecznie = pd.concat([ostatecznie_lr, ostatecznie_lg], axis = 0)
+        ostatecznie = ostatecznie.sort_values(by='pakiet', ascending=False)
+        ostatecznie = ostatecznie.drop_duplicates(subset=['Kod SAP', 'pakiet'])
 
         # ostatecznie_lg
         
@@ -219,12 +224,8 @@ if sekcja == 'Ibunoven':
 
         with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
         # Jeśli dane BRAZOFLAMIN istnieją, zapisz je w odpowiednim arkuszu
-            if 'ostatecznie_lr' in locals():
-                ostatecznie_lr.to_excel(writer, index=False, sheet_name='Rabat')
-
-            if 'ostatecznie_lg' in locals():
-                ostatecznie_lg.to_excel(writer, index=False, sheet_name='Gratis')
-
+            if 'ostatecznie' in locals():
+                ostatecznie.to_excel(writer, index=False)
         excel_file.seek(0)  # Resetowanie wskaźnika do początku pliku
 
          # Umożliwienie pobrania pliku Excel
@@ -235,95 +236,53 @@ if sekcja == 'Ibunoven':
             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
     
-        # Plik z poprzedniego monitoringu
+        #plik z poprzedniego monitoringu
         poprzedni = st.file_uploader(
-            label="Wrzuć plik z poprzedniego monitoringu"
+            label = "Wrzuć plik z poprzedniego monitoringu"
         )
     
         if poprzedni:
-            xls = pd.ExcelFile(poprzedni)  # Pobranie pliku z arkuszami
+            poprzedni = pd.read_excel(poprzedni)
+            st.write(poprzedni.head())
     
-        # Wczytanie danych z odpowiednich arkuszy
-        if 'Rabat' in xls.sheet_names:
-            poprzedni_lr = pd.read_excel(poprzedni, sheet_name='Rabat')
-            st.write('Poprzedni monitoring - Rabat:')
-            st.write(poprzedni_lr.head())
-
-        if 'Gratis' in xls.sheet_names:
-            poprzedni_lg = pd.read_excel(poprzedni, sheet_name='Gratis')
-            st.write('Poprzedni monitoring - Gratis :')
-            st.write(poprzedni_lg.head())
-
-        # Przetwarzanie 
-        if 'ostatecznie_lr' in locals() and 'poprzedni_lr' in locals():
-            poprzedni_lr = poprzedni_lr.rename(columns={'max_percent': 'old_percent'})
-            result_lr = ostatecznie_lr.merge(poprzedni_lr[['Kod SAP', 'old_percent']], on='Kod SAP', how='left')
-            result_lr['old_percent'] = result_lr['old_percent'].fillna(0)
-            result_lr['Czy dodać'] = result_lr.apply(lambda row: 'DODAJ' if row['max_percent'] > row['old_percent'] else '', axis=1)
-
-        if 'ostatecznie_lg' in locals() and 'poprzedni_lg' in locals():
-            # Zmień nazwę kolumny 'pakiet' na 'old_pakiet' w poprzedni_lg
-            # poprzedni_lg = poprzedni_lg.rename(columns={'pakiet': 'old_pakiet'})
-            # Dodaj poprzedni_lg na dole ostatecznie_lg
-            result_lg = pd.concat([ostatecznie_lg, poprzedni_lg], ignore_index=True)
-            # Usuń duplikaty na podstawie kluczowych kolumn (zachowując pierwsze wystąpienie)
-            result_lg = result_lg.drop_duplicates(subset=['Kod SAP', 'pakiet'], keep='first')
-            # Oznacz nowe wiersze (takie, które nie były w poprzedni_lg)
-            result_lg['Czy dodać'] = result_lg.apply(lambda row: 'DODAJ' if row['Kod SAP'] not in poprzedni_lg['Kod SAP'].values 
-                                                     or row['pakiet'] not in poprzedni_lg['pakiet'].values else '', axis=1)
-
-
-        # Zapisywanie plików do Excela
+        poprzedni = poprzedni.rename(columns={'pakiet': 'old_percent'})
+        # Wykonanie left join, dodanie 'old_percent' do pliku 'ostatecznie'
+        result = ostatecznie.merge(poprzedni[['Kod klienta', 'old_percent']], on='Kod klienta', how='left')
+        result['old_percent'] = result['old_percent'].fillna(0)
+        result['Czy dodać'] = result.apply(lambda row: 'DODAJ' if row['pakiet'] > row['old_percent'] else '', axis=1)
+        st.write('Kliknij aby pobrać plik z kodami, które kody należy dodać')
+    
         excel_file1 = io.BytesIO()
         with pd.ExcelWriter(excel_file1, engine='xlsxwriter') as writer:
-            if 'result_lr' in locals():
-                result_lr.to_excel(writer, index=False, sheet_name='Rabat')
-
-            if 'result_lg' in locals():
-                result_lg.to_excel(writer, index=False, sheet_name='Gratis')
-
-
+            result.to_excel(writer, index=False, sheet_name='Sheet1')
         excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
-
-        # Definiowanie nazwy pliku
-        nazwa_pliku = f"KETOPROFEN_{dzisiejsza_data}.xlsx"
-        # Umożliwienie pobrania pliku Excel
+    
+        nazwa_pliku1 = f"Ibunoven_{dzisiejsza_data}.xlsx"
+        #Umożliwienie pobrania pliku Excel
         st.download_button(
-            label='Kliknij aby pobrać plik z kodami, które kody należy dodać',
+            label='Pobierz',
             data=excel_file1,
-            file_name=nazwa_pliku,
+            file_name=nazwa_pliku1,
             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
-
-        result_lr = result_lr.drop(columns=['old_percent', 'Czy dodać'])
-        result_lg = result_lg.drop(columns=['Czy dodać'])
-        # result_lg = result_lg.drop(columns=['old_pakiet', 'Czy dodać'])
-
+    
+        result = result.drop(columns=['old_percent', 'Czy dodać'])
+    
+    
         st.write('Kliknij, aby pobrać plik z formułą max do następnego monitoringu')
-
-        # Tworzenie pliku Excel w pamięci
         excel_file2 = io.BytesIO()
-    
-        # Zapis do pliku Excel w pamięci
         with pd.ExcelWriter(excel_file2, engine='xlsxwriter') as writer:
-            result_lr.to_excel(writer, index=False, sheet_name='Rabat')
-            result_lg.to_excel(writer, index=False, sheet_name='Gratis')
-
-
-        # Resetowanie wskaźnika do początku pliku
-        excel_file2.seek(0) 
+            result.to_excel(writer, index=False, sheet_name='Sheet1')
+        excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
     
-        # Definiowanie nazwy pliku
-        nazwa_pliku = f"FM_KETOPROFEN_{dzisiejsza_data}.xlsx"
-    
+        nazwa_pliku = f"FM_Ibunoven_{dzisiejsza_data}.xlsx"
         # Umożliwienie pobrania pliku Excel
         st.download_button(
             label='Pobierz nowy plik FORMUŁA MAX',
             data=excel_file2,
-            file_name=nazwa_pliku,
+            file_name = nazwa_pliku,
             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
-
 
 ############################################################################# Standy wrzesień-marzec################################################################
 if sekcja == 'Standy wrzesień-marzec':
