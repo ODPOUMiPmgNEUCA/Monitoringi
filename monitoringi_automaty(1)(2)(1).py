@@ -119,6 +119,15 @@ if sekcja == 'Ibunoven':
 
         Lg['pakiet'] = Lg['Pakiet'].apply(extract_numbers_as_text)
         Lg
+        mapping = {
+            "150+2": 12,
+            "300+5": 15,
+            "500+10": 18,
+            "1000+25": 22
+        }
+
+        Lg["pakiet"] = Lg["pakiet"].map(mapping)
+        Lg
         #Lg
 
 
@@ -126,6 +135,7 @@ if sekcja == 'Ibunoven':
 
         # na zmiennoprzecinkowe
         Lr['Pakiet'] = Lr['Pakiet'].apply(percentage_to_float)
+        Lr
     
         # Dodaj nową kolumnę 'max_percent'
         Lr1 = Lr[Lr['SIECIOWY'] == 'SIECIOWY']
