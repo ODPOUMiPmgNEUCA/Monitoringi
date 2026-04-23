@@ -81,7 +81,7 @@ if sekcja == 'Ibunoven':
         
         # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
         if 'Pakiet' in xls.sheet_names:
-            Lg = pd.read_excel(df, sheet_name='Rabat', skiprows=13, usecols=[1, 3, 9])
+            Lg = pd.read_excel(df, sheet_name='Pakiet', skiprows=13, usecols=[1, 3, 8])
             st.write("Dane z arkusza Pakiet:")
             st.write(Lg.head())
 
