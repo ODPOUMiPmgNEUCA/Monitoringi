@@ -2667,7 +2667,7 @@ if sekcja == 'Panthenol':
         label = "Wrzuć plik Cykl - Panthenol"
     )
     if df:
-        df = pd.read_excel(df, sheet_name = 'Rabat', skiprows = 17, usecols = [1,3,10])
+        df = pd.read_excel(df, sheet_name = 'Rabat', skiprows = 19, usecols = [1,3,10])
         st.write(df.head())
 
 
