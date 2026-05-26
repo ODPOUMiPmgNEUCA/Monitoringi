@@ -2672,6 +2672,7 @@ if sekcja == 'Panthenol':
 
         # usuń braki danych z Kod klienta
         df = df.dropna(subset=['Kod SAP'])
+        df = df[df["Kod SAP"] != "(puste)"]
 
         # klient na całkowite
         df['Klient'] = df['Klient'].astype(int)
