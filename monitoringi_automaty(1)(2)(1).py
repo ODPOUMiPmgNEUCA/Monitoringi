@@ -2865,7 +2865,7 @@ if sekcja == 'Zimówka':
         
         # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
         if 'Rabat' in xls.sheet_names:
-            Lr = pd.read_excel(df, sheet_name='Rabat', skiprows=13, usecols=[1, 6])
+            Lr = pd.read_excel(df, sheet_name='Rabat', skiprows=12, usecols=[1, 6])
             st.write("Dane z arkusza Rabat:")
             st.write(Lr.head())
 
