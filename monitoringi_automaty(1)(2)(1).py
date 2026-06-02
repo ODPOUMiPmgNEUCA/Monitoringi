@@ -2901,7 +2901,6 @@ if sekcja == 'Zimówka':
 
         Lg['pakiet'] = Lg['Pakiet'].apply(extract_numbers_as_text)
         
-        Lg = Lg[~Lg['Indeks'].isin(wykluczone_indeksy)]
         Lg['SIECIOWY'] = 'SIECIOWY'
         Lg
 
