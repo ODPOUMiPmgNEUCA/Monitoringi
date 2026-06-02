@@ -2921,7 +2921,7 @@ if sekcja == 'Zimówka':
         #### p
         Lg1 = Lg[['Klient','Indeks','pakiet']]
 
-        stand_lr = Lr2
+        stand_lr = Lr2.rename(columns={'Klient': 'Kod SAP'})
         pow_lr = Lr1
 
         pow_lg = Lg1
