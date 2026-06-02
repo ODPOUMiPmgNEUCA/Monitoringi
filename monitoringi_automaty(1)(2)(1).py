@@ -3127,6 +3127,10 @@ if sekcja == 'Zimówka':
 
         if 'ostatecznie_lr' in locals() and 'poprzedni_lr' in locals():
             poprzedni_lr = poprzedni_lr.rename(columns={'max_percent': 'old_percent'})
+            
+            ostatecznie_lr['Kod SAP'] = ostatecznie_lr['Kod SAP'].astype(str).str.strip()
+            poprzedni_lr['Kod SAP'] = poprzedni_lr['Kod SAP'].astype(str).str.strip()
+            
             result_lr = ostatecznie_lr.merge(
                 poprzedni_lr[['Kod SAP', 'old_percent']],
                 on='Kod SAP',
