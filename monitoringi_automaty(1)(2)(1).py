@@ -401,7 +401,7 @@ if sekcja == 'Ibunoven':
 
         ostatecznie = pd.concat([ostatecznie_lr, ostatecznie_lg], axis = 0)
         ostatecznie = ostatecznie.sort_values(by='pakiet', ascending=False)
-        ostatecznie = ostatecznie.drop_duplicates(subset=['Kod SAP', 'pakiet'])
+        ostatecznie = ostatecznie.drop_duplicates(subset=['Kod SAP'])
 
         # ostatecznie_lg
         
