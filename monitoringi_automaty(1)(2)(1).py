@@ -2928,8 +2928,7 @@ if sekcja == 'Zimówka':
         pow_lg = Lg1
         pow_lg['Logiczne'] = pow_lg['Indeks'].astype(str) + '_' + pow_lg['pakiet'].astype(str)
 
-
-       mapa_nielogiczne = {
+        mapa_nielogiczne = {
             # --- ARKUSZ 1 ---
             '97520_10+2': '97520_4+1', '97520_60+15': '97520_4+1', '97520_4+1': '97520_4+1',
             '117226_20+5': '117226_8+3', '117226_80+26': '117226_8+3', '117226_8+3': '117226_8+3',
