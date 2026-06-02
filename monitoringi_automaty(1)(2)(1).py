@@ -2914,8 +2914,8 @@ if sekcja == 'Zimówka':
         Lr2['max_percent'] = Lr2[['Pakiet']].max(axis=1)
         
         ###### 1 to SIECIOWI, 2 to punkt dostaw
-        Lr1 = Lr1[['Klient','Kod SAP','max_percent']]
-        Lr2 = Lr2[['Kod SAP','max_percent']]
+        Lr1 = Lr1[['Klient','max_percent']]
+        Lr2 = Lr2[['Klient','max_percent']]
 
         
         #### p
