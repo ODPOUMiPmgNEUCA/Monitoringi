@@ -30,7 +30,7 @@ st.set_page_config(page_title='Monitoringi AUTOMATY', layout='wide')
 
 sekcja = st.sidebar.radio(
     'Wybierz monitoring:',
-    ('Alergia','Cera+','Ibunoven','Ketoprofen','Musy','Oferta sezonowa','Panthenol', 'Plastry','Plastry Partner','Standy wrzesień-marzec','Symetykon', 'Zimowe wzmocnienie odporności','Zgaginstop')
+    ('Alergia','Cera+','Ibunoven','Ketoprofen','Musy','Oferta sezonowa','Panthenol', 'Plastry','Plastry Partner','Standy wrzesień-marzec','Symetykon', 'Zimowe wzmocnienie odporności','Zimówka','Zgaginstop')
  )
 
 tabs_font_css = """
@@ -2849,7 +2849,391 @@ if sekcja == 'Panthenol':
                     file_name = nazwa_pliku,
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
-   
+
+
+############################################################################### ZIMÓWKA ##############################################################################################
+if sekcja == 'Zimówka':
+    st.write(tabs_font_css, unsafe_allow_html=True)
+
+    df = st.file_uploader(
+        label="Wrzuć plik - Zimówka"
+    )
+    
+    if df:
+        # Pobieramy listę dostępnych arkuszy
+        xls = pd.ExcelFile(df)
+        
+        # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
+        if 'Rabat' in xls.sheet_names:
+            Lr = pd.read_excel(df, sheet_name='Rabat', skiprows=13, usecols=[1, 6])
+            st.write("Dane z arkusza Rabat:")
+            st.write(Lr.head())
+
+
+        # Sprawdzamy, które arkusze są dostępne i wczytujemy odpowiednie dane
+        if 'Gratis' in xls.sheet_names:
+            Lg = pd.read_excel(df, sheet_name='Gratis', skiprows=7, usecols=[1, 3, 9])
+            st.write("Dane z arkusza Gratis:")
+            st.write(Lg.head())
+
+
+        Lr = Lr.dropna(subset=['Pakiet']) 
+        Lg = Lg.dropna(subset=['Pakiet']) 
+
+        Lg = Lg[~Lg['Pakiet'].str.lower().str.contains('brak')]
+
+        Lr = Lr.dropna(subset=['Klient'])
+        # klient na całkowite
+        Lr['Klient'] = Lr['Klient'].astype(int)
+        Lg['Klient'] = Lg['Klient'].astype(int)
+        Lg['Indeks'] = Lg['Indeks'].astype(int)
+
+
+
+        Lr.columns=['Klient','Pakiet']
+ 
+        
+        # Dodaj kolumnę 'SIECIOWY', która będzie zawierać 'SIECIOWY' jeśli w kolumnach '12' lub '14' jest słowo 'powiązanie'
+        Lr['SIECIOWY'] = Lr.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['Pakiet']).lower() else '', axis=1)
+        
+
+        Lr['Pakiet'] = Lr['Pakiet'].apply(extract_percentage)
+
+        Lg['pakiet'] = Lg['Pakiet'].apply(extract_numbers_as_text)
+        
+        Lg = Lg[~Lg['Indeks'].isin(wykluczone_indeksy)]
+        Lg['SIECIOWY'] = 'SIECIOWY'
+        Lg
+
+        # na zmiennoprzecinkowe
+        Lr['Pakiet'] = Lr['Pakiet'].apply(percentage_to_float)
+    
+        # Dodaj nową kolumnę 'max_percent'
+        Lr1 = Lr[Lr['SIECIOWY'] == 'SIECIOWY']
+        Lr2 = Lr[Lr['SIECIOWY'] != 'SIECIOWY']
+        Lr1['max_percent'] = Lr1[['Pakiet']].max(axis=1)
+        Lr2['max_percent'] = Lr2[['Pakiet']].max(axis=1)
+        
+        ###### 1 to SIECIOWI, 2 to punkt dostaw
+        Lr1 = Lr1[['Klient','Kod SAP','max_percent']]
+        Lr2 = Lr2[['Kod SAP','max_percent']]
+
+        
+        #### p
+        Lg1 = Lg[['Klient','Indeks','pakiet']]
+
+        stand_lr = Lr2
+        pow_lr = Lr1
+
+        pow_lg = Lg1
+        pow_lg['Logiczne'] = pow_lg['Indeks'].astype(str) + '_' + pow_lg['pakiet'].astype(str)
+
+
+       mapa_nielogiczne = {
+            # --- ARKUSZ 1 ---
+            '97520_10+2': '97520_4+1', '97520_60+15': '97520_4+1', '97520_4+1': '97520_4+1',
+            '117226_20+5': '117226_8+3', '117226_80+26': '117226_8+3', '117226_8+3': '117226_8+3',
+            '117790_20+5': '117790_8+3', '117790_80+26': '117790_8+3', '117790_8+3': '117790_8+3',
+            '65601_20+5': '65601_8+3', '65601_80+30': '65601_8+3', '65601_8+3': '65601_8+3',
+            '65602_20+5': '65602_8+3', '65602_80+30': '65602_8+3', '65602_8+3': '65602_8+3',
+            '66660_20+5': '66660_8+3', '66660_80+30': '66660_8+3', '66660_8+3': '66660_8+3',
+            '120002_15+2': '120002_5+1', '120002_50+10': '120002_5+1', '120002_5+1': '120002_5+1',
+
+            # --- ARKUSZ 2 ---
+            '122969_20+5': '122969_8+3', '122969_80+30': '122969_8+3', '122969_8+3': '122969_8+3',
+            '97032_15+3': '97032_8+2', '97032_60+15': '97032_8+2', '97032_8+2': '97032_8+2',
+            '121729_20+5': '121729_10+3', '121729_50+15': '121729_10+3', '121729_10+3': '121729_10+3',
+            '121730_20+5': '121730_10+3', '121730_50+15': '121730_10+3', '121730_10+3': '121730_10+3',
+            '97047_50+20': '97047_5+2', '97047_100+45': '97047_5+2', '97047_5+2': '97047_5+2',
+            '97048_50+20': '97048_5+2', '97048_100+45': '97048_5+2', '97048_5+2': '97048_5+2',
+            '97049_30+12': '97049_5+2', '97049_50+20': '97049_5+2', '97049_5+2': '97049_5+2',
+
+            # --- ARKUSZ 3 ---
+            '97050_50+20': '97050_5+2', '97050_100+45': '97050_5+2', '97050_5+2': '97050_5+2',
+            '97051_50+20': '97051_5+2', '97051_100+45': '97051_5+2', '97051_5+2': '97051_5+2',
+            '97052_30+12': '97052_5+2', '97052_50+20': '97052_5+2', '97052_5+2': '97052_5+2',
+            '123542_10+3': '123542_5+2', '123542_50+20': '123542_5+2', '123542_5+2': '123542_5+2',
+            '116878_20+7': '116878_5+2', '116878_50+20': '116878_5+2', '116878_5+2': '116878_5+2',
+            '116929_10+3': '116929_5+2', '116929_50+20': '116929_5+2', '116929_5+2': '116929_5+2',
+            '91580_20+5': '91580_8+3', '91580_80+30': '91580_8+3', '91580_8+3': '91580_8+3',
+
+            # --- ARKUSZ 4 ---
+            '91743_20+6': '91743_6+2', '91743_60+20': '91743_6+2', '91743_6+2': '91743_6+2',
+            '110155_10+2': '110155_4+1', '110155_60+15': '110155_4+1', '110155_4+1': '110155_4+1',
+            '97042_50+30': '97042_10+7', '97042_100+70': '97042_10+7', '97042_10+7': '97042_10+7',
+            '97044_50+30': '97044_10+7', '97044_100+70': '97044_10+7', '97044_10+7': '97044_10+7',
+            '97045_30+18': '97045_6+4', '97045_60+40': '97045_6+4', '97045_6+4': '97045_6+4',
+            '69165_20+5': '69165_8+3', '69165_80+30': '69165_8+3', '69165_8+3': '69165_8+3',
+            '75127_20+5': '75127_8+3', '75127_80+30': '75127_8+3', '75127_8+3': '75127_8+3',
+
+            # --- ARKUSZ 5 ---
+            '121724_10+3': '121724_6+2', '121724_60+20': '121724_6+2', '121724_6+2': '121724_6+2',
+            '122696_10+3': '122696_6+2', '122696_60+20': '122696_6+2', '122696_6+2': '122696_6+2',
+            '65007_5+1': '65007_4+1', '65007_40+10': '65007_4+1', '65007_4+1': '65007_4+1',
+            '70144_20+5': '70144_8+3', '70144_80+30': '70144_8+3', '70144_8+3': '70144_8+3',
+            '69133_20+5': '69133_8+3', '69133_80+30': '69133_8+3', '69133_8+3': '69133_8+3',
+            '62472_20+5': '62472_8+3', '62472_80+30': '62472_8+3', '62472_8+3': '62472_8+3',
+            '97686_20+5': '97686_8+3', '97686_80+30': '97686_8+3', '97686_8+3': '97686_8+3',
+
+            # --- ARKUSZ 6 ---
+            '84747_5+1': '84747_4+1', '84747_40+10': '84747_4+1', '84747_4+1': '84747_4+1',
+            '66526_20+3': '66526_21+7', '66526_63+21': '66526_21+7', '66526_21+7': '66526_21+7',
+            '114162_20+5': '114162_8+3', '114162_80+30': '114162_8+3', '114162_8+3': '114162_8+3',
+            '81142_20+5': '81142_8+3', '81142_80+30': '81142_8+3', '81142_8+3': '81142_8+3',
+            '77745_20+5': '77745_8+3', '77745_80+30': '77745_8+3', '77745_8+3': '77745_8+3',
+            '89051_20+5': '89051_8+3', '89051_80+30': '89051_8+3', '89051_8+3': '89051_8+3',
+            '103315_20+5': '103315_8+3', '103315_80+30': '103315_8+3', '103315_8+3': '103315_8+3',
+
+            # --- ARKUSZ 7 ---
+            '91367_20+5': '91367_8+3', '91367_80+30': '91367_8+3', '91367_8+3': '91367_8+3',
+            '102152_20+5': '102152_8+3', '102152_80+30': '102152_8+3', '102152_8+3': '102152_8+3',
+            '116405_20+5': '116405_8+3', '116405_80+30': '116405_8+3', '116405_8+3': '116405_8+3',
+            '117222_15+4': '117222_10+3', '117222_50+15': '117222_10+3', '117222_10+3': '117222_10+3',
+            '117223_15+4': '117223_10+3', '117223_50+15': '117223_10+3', '117223_10+3': '117223_10+3',
+            '117225_15+4': '117225_10+3', '117225_50+15': '117225_10+3', '117225_10+3': '117225_10+3',
+            '103687_15+4': '103687_10+3', '103687_50+15': '103687_10+3', '103687_10+3': '103687_10+3',
+
+            # --- ARKUSZ 8 ---
+            '117224_15+4': '117224_10+3', '117224_50+15': '117224_10+3', '117224_10+3': '117224_10+3',
+            '103688_15+4': '103688_10+3', '103688_50+15': '103688_10+3', '103688_10+3': '103688_10+3',
+            '97072_40+10': '97072_10+4', '97072_120+40': '97072_10+4', '97072_12+4': '97072_10+4',
+            '97073_40+10': '97073_10+4', '97073_120+40': '97073_10+4', '97073_12+4': '97073_10+4',
+            '76926_15+5': '76926_10+6', '76926_25+15': '76926_10+6', '76926_10+6': '76926_10+6'
+        }
+        
+        # Bezpieczne mapowanie: jeśli wartość nie pasuje do mapy, zachowuje oryginalną
+        pow_lg['Nielogiczne'] = pow_lg['Logiczne'].map(mapa_nielogiczne).fillna(pow_lg['Logiczne'])
+
+        pow_lg
+
+        
+        #TERAZ IMS
+        ims = st.file_uploader(
+            label = "Wrzuć plik ims_nhd"
+        )
+    
+        if ims:
+            ims = pd.read_excel(ims, usecols=[0,2,19,21])
+            st.write(ims.head())
+    
+        ims = ims[ims['APD_Czy_istnieje_na_rynku']==1]
+        ims = ims[ims['APD_Rodzaj_farmaceutyczny'].isin(['AP - Apteka','ME - Sklep zielarsko - medyczny','PU - Punkt apteczny'])]
+    
+        wynik_df_lr = pd.merge(pow_lr, ims, left_on='Klient', right_on='Klient', how='left')
+        
+        wynik_df_lg = pd.merge(pow_lg, ims, left_on='Klient', right_on='Klient', how='left')
+    
+        # Wybór potrzebnych kolumn: 'APD_kod_SAP_apteki' i 'max_percent'
+        wynik_df_lr = wynik_df_lr[['Klient','APD_kod_SAP_apteki', 'max_percent']]
+        wynik_df_lg = wynik_df_lg[['Klient','APD_kod_SAP_apteki', 'Indeks', 'Nielogiczne']]
+    
+        #to są kody SAP
+        wynik_df1_lr = wynik_df_lr.rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
+        wynik_df1_lr = wynik_df1_lr[['Kod SAP','max_percent']]
+
+        wynik_df1_lg = wynik_df_lg.rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
+        wynik_df1_lg = wynik_df1_lg[['Kod SAP','Indeks','Nielogiczne']]
+
+        #wynik_df1
+    
+        #to są kody powiazan
+        wynik_df2_lr = wynik_df_lr.rename(columns={'Klient': 'Kod SAP'})
+        wynik_df2_lr = wynik_df2_lr[['Kod SAP','max_percent']]
+
+        wynik_df2_lg = wynik_df_lg.rename(columns={'Klient': 'Kod SAP'})
+        wynik_df2_lg = wynik_df2_lg[['Kod SAP','Indeks','Nielogiczne']]
+
+        #wynik_df2
+
+        #POŁĄCZYĆ wynik_df z standard_ost
+        polaczone_lr = pd.concat([stand_lr, wynik_df1_lr, wynik_df2_lr], axis = 0)
+
+        polaczone_lg = pd.concat([wynik_df1_lg, wynik_df2_lg], axis = 0)
+  
+        posortowane_lr = polaczone_lr.sort_values(by='max_percent', ascending=False)
+
+        ostatecznie_lr = posortowane_lr.drop_duplicates(subset='Kod SAP')
+        ostatecznie_lr = ostatecznie_lr[ostatecznie_lr['max_percent'] != 0]
+
+
+        ostatecznie_lg = polaczone_lg.drop_duplicates(subset=['Kod SAP', 'Indeks', 'Nielogiczne'])
+
+        # Grupy zdefiniowane na podstawie przesłanego obrazka (arkusz 1 do arkusz 8)
+        grupa_1 = [97520, 117226, 117790, 65601, 65602, 66660, 120002]
+        grupa_2 = [122969, 97032, 121724, 121730, 97047, 97048, 97049]
+        grupa_3 = [97050, 97051, 97052, 123542, 116878, 116929, 91580]
+        grupa_4 = [91743, 110155, 97042, 97044, 97045, 69165, 75127]
+        grupa_5 = [121724, 122696, 65007, 70144, 69133, 62472, 97686]
+        grupa_6 = [84747, 66526, 114162, 81142, 77745, 89051, 103315]
+        grupa_7 = [91367, 102152, 116405, 117222, 117223, 117225, 103687]
+        grupa_8 = [117224, 103688, 97072, 97073, 76926]
+
+        arkusze_gratis = {
+            'arkusz 1': ostatecznie_lg[ostatecznie_lg['Indeks'].isin(grupa_1)],
+            'arkusz 2': ostatecznie_lg[ostatecznie_lg['Indeks'].isin(grupa_2)],
+            'arkusz 3': ostatecznie_lg[ostatecznie_lg['Indeks'].isin(grupa_3)],
+            'arkusz 4': ostatecznie_lg[ostatecznie_lg['Indeks'].isin(grupa_4)],
+            'arkusz 5': ostatecznie_lg[ostatecznie_lg['Indeks'].isin(grupa_5)],
+            'arkusz 6': ostatecznie_lg[ostatecznie_lg['Indeks'].isin(grupa_6)],
+            'arkusz 7': ostatecznie_lg[ostatecznie_lg['Indeks'].isin(grupa_7)],
+            'arkusz 8': ostatecznie_lg[ostatecznie_lg['Indeks'].isin(grupa_8)],
+        }
+
+        st.write('Jeśli to pierwszy monitoring, pobierz ten plik, jeśli nie, wrzuć plik z poprzedniego monitoringu i NIE POBIERAJ TEGO PLIKU')
+        excel_file = io.BytesIO()
+        
+        with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
+        
+            # arkusz bez zmian
+            if 'ostatecznie_lr' in locals():
+                ostatecznie_lr.to_excel(writer, index=False, sheet_name='Rabat')
+        
+            # grupy LG w osobnych arkuszach (od 1 do 8)
+            for nazwa_arkusza, df_grupy in arkusze_gratis.items():
+                if not df_grupy.empty:
+                    df_grupy.to_excel(writer, index=False, sheet_name=nazwa_arkusza)
+
+
+        excel_file.seek(0)  # Resetowanie wskaźnika do początku pliku
+
+         # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Pobierz, jeśli to pierwszy monitoring',
+            data=excel_file,
+            file_name='czy_dodac.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+        # Plik z poprzedniego monitoringu 
+        poprzedni = st.file_uploader(label="Wrzuć plik z poprzedniego monitoringu")
+    
+        # Plik z poprzedniego monitoringu
+        if poprzedni:
+            xls = pd.ExcelFile(poprzedni)
+        
+        # Rabat – bez zmian
+        if 'Rabat' in xls.sheet_names:
+            poprzedni_lr = pd.read_excel(poprzedni, sheet_name='Rabat')
+            st.write('Poprzedni monitoring - Rabat:')
+            st.write(poprzedni_lr.head())
+        
+        # Gratis – 8 grup
+        poprzedni_gratis = {}
+        
+        for nazwa in arkusze_gratis.keys():
+            if nazwa in xls.sheet_names:
+                poprzedni_gratis[nazwa] = pd.read_excel(poprzedni, sheet_name=nazwa)
+                st.write(f'Poprzedni monitoring - {nazwa}:')
+                st.write(poprzedni_gratis[nazwa].head())
+
+
+        if 'ostatecznie_lr' in locals() and 'poprzedni_lr' in locals():
+            poprzedni_lr = poprzedni_lr.rename(columns={'max_percent': 'old_percent'})
+            result_lr = ostatecznie_lr.merge(
+                poprzedni_lr[['Kod SAP', 'old_percent']],
+                on='Kod SAP',
+                how='left'
+            )
+            result_lr['old_percent'] = result_lr['old_percent'].fillna(0)
+            result_lr['Czy dodać'] = result_lr.apply(
+                lambda row: 'DODAJ' if row['max_percent'] > row['old_percent'] else '',
+                axis=1
+            )
+
+        wyniki_gratis = {}
+        
+        for nazwa, df_aktualny in arkusze_gratis.items():
+        
+            df_poprzedni = poprzedni_gratis.get(nazwa)
+        
+            if df_poprzedni is not None:
+                result = pd.concat([df_aktualny, df_poprzedni], ignore_index=True)
+        
+                result = result.drop_duplicates(
+                    subset=['Kod SAP', 'Indeks','Nielogiczne'],
+                    keep='first'
+                )
+        
+                result['Czy dodać'] = result.apply(
+                    lambda row: 'DODAJ'
+                    if not (
+                        (row['Kod SAP'] in df_poprzedni['Kod SAP'].values)
+                        and (row['Nielogiczne'] in df_poprzedni['Nielogiczne'].values)
+                    )
+                    else '',
+                    axis=1
+                )
+            else:
+                result = df_aktualny.copy()
+                result['Czy dodać'] = 'DODAJ'
+        
+            wyniki_gratis[nazwa] = result
+
+
+        excel_file1 = io.BytesIO()
+        
+        with pd.ExcelWriter(excel_file1, engine='xlsxwriter') as writer:
+        
+            if 'result_lr' in locals():
+                result_lr.to_excel(writer, index=False, sheet_name='Rabat')
+        
+            for nazwa, df in wyniki_gratis.items():
+                df.to_excel(writer, index=False, sheet_name=nazwa)
+
+        excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
+
+        # Definiowanie nazwy pliku
+        nazwa_pliku = f"ZIMÓWKA_{dzisiejsza_data}.xlsx"
+        # Umożliwienie pobrania pliku Excel
+        st.download_button(
+            label='Kliknij aby pobrać plik z kodami, które kody należy dodać',
+            data=excel_file1,
+            file_name=nazwa_pliku,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+
+
+        # Rabat – bez zmian
+        result_lr = result_lr.drop(columns=['old_percent', 'Czy dodać'], errors='ignore')
+        
+        # Gratis – każda grupa osobno
+        for nazwa in wyniki_gratis:
+            wyniki_gratis[nazwa] = wyniki_gratis[nazwa].drop(
+                columns=['Czy dodać'],
+                errors='ignore'
+            )
+
+
+        st.write('Kliknij, aby pobrać plik z formułą max do następnego monitoringu')
+
+
+        excel_file2 = io.BytesIO()
+
+        with pd.ExcelWriter(excel_file2, engine='xlsxwriter') as writer:
+        
+            # Rabat
+            result_lr.to_excel(writer, index=False, sheet_name='Rabat')
+        
+            # Gratis – 8 arkuszy
+            for nazwa, df in wyniki_gratis.items():
+                df.to_excel(writer, index=False, sheet_name=nazwa)
+
+
+        excel_file2.seek(0)
+        
+        nazwa_pliku = f"FM_ZIMÓWKA_{dzisiejsza_data}.xlsx"
+        
+        st.download_button(
+            label='Pobierz nowy plik FORMUŁA MAX',
+            data=excel_file2,
+            file_name=nazwa_pliku,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+
+
+
 
 
 
