@@ -2906,6 +2906,7 @@ if sekcja == 'Zimówka':
 
         # na zmiennoprzecinkowe
         Lr['Pakiet'] = Lr['Pakiet'].apply(percentage_to_float)
+        Lr
     
         # TUTAJ DOPISZ TĘ LINIĘ – zostawiamy tylko pakiety równe 20% (0.20)
         Lr = Lr[Lr['Pakiet'] == 0.20]
