@@ -2909,7 +2909,7 @@ if sekcja == 'Zimówka':
         Lr
     
         # TUTAJ DOPISZ TĘ LINIĘ – zostawiamy tylko pakiety równe 20% (0.20)
-        Lr = Lr[Lr['Pakiet'] == 0.20]
+        Lr = Lr[Lr['Pakiet'] == 20]
     
         # Dodaj nową kolumnę 'max_percent'
         Lr1 = Lr[Lr['SIECIOWY'] == 'SIECIOWY']
