@@ -1505,7 +1505,7 @@ if sekcja == 'Vit D':
             st.write(Lr.head())
 
         if 'Pakiet od 02.07' in xls.sheet_names:
-            Lg = pd.read_excel(df, sheet_name='Pakiet od 02.07', skiprows=7, usecols=[1, 6])
+            Lg = pd.read_excel(df, sheet_name='Pakiet od 02.07', skiprows=12, usecols=[1, 6])
             st.write("Dane z arkusza Pakiet od 02.07:")
             st.write(Lg.head())
 
