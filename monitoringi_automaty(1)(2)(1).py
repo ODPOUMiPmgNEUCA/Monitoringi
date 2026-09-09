@@ -1611,7 +1611,7 @@ if sekcja == 'Vit D':
                 if 'ostatecznie_lr' in locals() and not ostatecznie_lr.empty:
                     ostatecznie_lr.to_excel(writer, index=False, sheet_name='Rabat')
                 if 'ostatecznie_lg' in locals() and not ostatecznie_lg.empty:
-                    ostatecznie_lg.to_excel(writer, index=False, sheet_name='Pakiet')
+                    ostatecznie_lg.to_excel(writer, index=False, sheet_name='Pakiet od 02.07')
 
             excel_file.seek(0)
             st.download_button(
