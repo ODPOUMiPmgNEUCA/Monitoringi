@@ -1494,13 +1494,6 @@ if sekcja == 'Vit D':
     
     if df:
         xls = pd.ExcelFile(df)
-        
-        # Słownik mapowania grup promocyjnych dla Pakietów
-        mapa_grupa_promocyjna_pakiet = {
-            '10+4': 'VITD3M60_10+4',
-            '10+4, 50+21': 'VITD3M60_50+21',
-            '20+9': 'VITD3M60_20+9'
-        }
 
         # 1. Odczyt arkuszy
         Lr = pd.DataFrame()
@@ -1512,7 +1505,7 @@ if sekcja == 'Vit D':
             st.write(Lr.head())
 
         if 'Pakiet od 02.07' in xls.sheet_names:
-            Lg = pd.read_excel(df, sheet_name='Pakiet od 02.07', skiprows=12, usecols=[1, 6])
+            Lg = pd.read_excel(df, sheet_name='Pakiet od 02.07', skiprows=7, usecols=[1, 6])
             st.write("Dane z arkusza Pakiet od 02.07:")
             st.write(Lg.head())
 
@@ -1530,10 +1523,10 @@ if sekcja == 'Vit D':
             Lr['Pakiet'] = Lr['Pakiet'].apply(extract_percentage)
             Lr['Pakiet'] = Lr['Pakiet'].apply(percentage_to_float)
             
-            # Zostawiamy rabaty równe lub większe od 20% (w tym 25%)
+            # Zostawiamy rabaty równe lub większe od 20%
             Lr = Lr[Lr['Pakiet'] >= 20]
 
-            # Dynamiczne generowanie grupy promocyjnej na podstawie wartości procentowej
+            # Dynamiczne generowanie grupy promocyjnej
             Lr['Grupa promocyjna'] = Lr['Pakiet'].apply(lambda x: f"VIT_D3_MAX_{int(x)}")
 
             # Wyznaczenie max_percent dla sieciowych i indywidualnych
@@ -1554,19 +1547,33 @@ if sekcja == 'Vit D':
 
             Lg['pakiet'] = Lg['Pakiet'].apply(extract_numbers_as_text)
             
-            # Mapowanie pakietów na format 'Nielogiczne'
-            mapa_nielogiczne = {
+            # Mapowanie pakietów na format 'Rodzaj pakietu'
+            mapa_rodzaj_pakietu = {
                 '10+4': '10+4',
-                '50+21': '10+4, 50+21',
+                '50+21': '50+21',
                 '100+45': '20+9'
             }
             
             pow_lg = Lg[['Klient', 'pakiet']].copy()
-            pow_lg['Nielogiczne'] = pow_lg['pakiet'].map(mapa_nielogiczne)
-            pow_lg = pow_lg.dropna(subset=['Nielogiczne'])
+            pow_lg['Rodzaj pakietu'] = pow_lg['pakiet'].map(mapa_rodzaj_pakietu)
+            pow_lg = pow_lg.dropna(subset=['Rodzaj pakietu'])
 
-            # Przypisanie Grupy Promocyjnej
-            pow_lg['Grupa promocyjna'] = pow_lg['Nielogiczne'].map(mapa_grupa_promocyjna_pakiet)
+            # Rozbijanie na wiersze z odpowiednimi Grupami Promocyjnymi
+            rekordy_lg = []
+            for _, row in pow_lg.iterrows():
+                rodzaj_val = row['Rodzaj pakietu']
+                klient_val = row['Klient']
+
+                if rodzaj_val == '50+21':
+                    # Dodajemy dwa wiersze dla pakietu 50+21
+                    rekordy_lg.append({'Klient': klient_val, 'Rodzaj pakietu': rodzaj_val, 'Grupa promocyjna': 'VITD3M60_50+21'})
+                    rekordy_lg.append({'Klient': klient_val, 'Rodzaj pakietu': rodzaj_val, 'Grupa promocyjna': 'VITD3M60_10+4'})
+                elif rodzaj_val == '10+4':
+                    rekordy_lg.append({'Klient': klient_val, 'Rodzaj pakietu': rodzaj_val, 'Grupa promocyjna': 'VITD3M60_10+4'})
+                elif rodzaj_val == '20+9':
+                    rekordy_lg.append({'Klient': klient_val, 'Rodzaj pakietu': rodzaj_val, 'Grupa promocyjna': 'VITD3M60_20+9'})
+
+            pow_lg = pd.DataFrame(rekordy_lg)
 
             st.write("Wiersze dopasowane i zmienione według mapy (Pakiet od 02.07):")
             st.dataframe(pow_lg)
@@ -1593,11 +1600,11 @@ if sekcja == 'Vit D':
             # --- ŁĄCZENIE LG (PAKIET OD 02.07) ---
             if 'pow_lg' in locals() and not pow_lg.empty:
                 wynik_df_lg = pd.merge(pow_lg, ims, left_on='Klient', right_on='Klient', how='left')
-                wynik_df1_lg = wynik_df_lg[['APD_kod_SAP_apteki', 'Nielogiczne', 'Grupa promocyjna']].rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
-                wynik_df2_lg = wynik_df_lg[['Klient', 'Nielogiczne', 'Grupa promocyjna']].rename(columns={'Klient': 'Kod SAP'})
+                wynik_df1_lg = wynik_df_lg[['APD_kod_SAP_apteki', 'Rodzaj pakietu', 'Grupa promocyjna']].rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
+                wynik_df2_lg = wynik_df_lg[['Klient', 'Rodzaj pakietu', 'Grupa promocyjna']].rename(columns={'Klient': 'Kod SAP'})
                 
                 polaczone_lg = pd.concat([wynik_df1_lg, wynik_df2_lg], axis=0)
-                ostatecznie_lg = polaczone_lg.dropna(subset=['Kod SAP']).drop_duplicates(subset=['Kod SAP', 'Nielogiczne', 'Grupa promocyjna'])
+                ostatecznie_lg = polaczone_lg.dropna(subset=['Kod SAP']).drop_duplicates(subset=['Kod SAP', 'Rodzaj pakietu', 'Grupa promocyjna'])
 
             # --- PIERWSZY MONITORING: GENEROWANIE PLIKU ---
             st.write('Jeśli to pierwszy monitoring, pobierz ten plik. Jeśli nie, wrzuć plik z poprzedniego monitoringu poniżej.')
@@ -1650,15 +1657,19 @@ if sekcja == 'Vit D':
                 if 'Pakiet od 02.07' in xls_pop.sheet_names and 'ostatecznie_lg' in locals():
                     poprzedni_lg = pd.read_excel(poprzedni, sheet_name='Pakiet od 02.07')
                     
+                    # Obsługa potencjalnej wstecznej kompatybilności, gdyby w starym pliku była jeszcze nazwa 'Nielogiczne'
+                    if 'Nielogiczne' in poprzedni_lg.columns and 'Rodzaj pakietu' not in poprzedni_lg.columns:
+                        poprzedni_lg = poprzedni_lg.rename(columns={'Nielogiczne': 'Rodzaj pakietu'})
+
                     poprzedni_lg['Kod SAP'] = poprzedni_lg['Kod SAP'].astype(str).str.strip()
                     ostatecznie_lg['Kod SAP'] = ostatecznie_lg['Kod SAP'].astype(str).str.strip()
 
                     result_lg = pd.concat([ostatecznie_lg, poprzedni_lg], ignore_index=True)
-                    result_lg = result_lg.drop_duplicates(subset=['Kod SAP', 'Nielogiczne', 'Grupa promocyjna'], keep='first')
+                    result_lg = result_lg.drop_duplicates(subset=['Kod SAP', 'Rodzaj pakietu', 'Grupa promocyjna'], keep='first')
                     
-                    pary_poprzednie = set(zip(poprzedni_lg['Kod SAP'], poprzedni_lg['Nielogiczne'], poprzedni_lg['Grupa promocyjna']))
+                    pary_poprzednie = set(zip(poprzedni_lg['Kod SAP'], poprzedni_lg['Rodzaj pakietu'], poprzedni_lg['Grupa promocyjna']))
                     result_lg['Czy dodać'] = result_lg.apply(
-                        lambda row: '' if (row['Kod SAP'], row['Nielogiczne'], row['Grupa promocyjna']) in pary_poprzednie else 'DODAJ',
+                        lambda row: '' if (row['Kod SAP'], row['Rodzaj pakietu'], row['Grupa promocyjna']) in pary_poprzednie else 'DODAJ',
                         axis=1
                     )
                 else:
@@ -1709,7 +1720,6 @@ if sekcja == 'Vit D':
                     file_name=nazwa_pliku_fm,
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
-
 
 
 
