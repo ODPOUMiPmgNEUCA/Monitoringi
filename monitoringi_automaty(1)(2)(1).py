@@ -30,7 +30,7 @@ st.set_page_config(page_title='Monitoringi AUTOMATY', layout='wide')
 
 sekcja = st.sidebar.radio(
     'Wybierz monitoring:',
-    ('Cera+','Musy','Panthenol', 'Plastry','Plastry Partner','Standy wrzesień-marzec','Symetykon','Zimówka')
+    ('Cera+','Musy','Panthenol', 'Plastry','Plastry Partner','Standy wrzesień-marzec','Symetykon','Vit D','Zimówka')
  )
 
 tabs_font_css = """
@@ -1486,11 +1486,234 @@ if sekcja == 'Zimówka':
 
 
 
+############################################################################### VIT D ##############################################################################################
+if sekcja == 'Vit D':
+    st.write(tabs_font_css, unsafe_allow_html=True)
 
-
-
+    df = st.file_uploader(label="Wrzuć plik - Vit D")
     
-   
+    if df:
+        xls = pd.ExcelFile(df)
+        
+        # Słownik mapowania grup promocyjnych dla Pakietów
+        mapa_grupa_promocyjna_pakiet = {
+            '10+4': 'VITD3M60_10+4',
+            '10+4, 50+21': 'VITD3M60_50+21',
+            '20+9': 'VITD3M60_20+9'
+        }
+
+        # 1. Odczyt arkuszy
+        Lr = pd.DataFrame()
+        Lg = pd.DataFrame()
+
+        if 'Rabat' in xls.sheet_names:
+            Lr = pd.read_excel(df, sheet_name='Rabat', skiprows=12, usecols=[1, 6])
+            st.write("Dane z arkusza Rabat:")
+            st.write(Lr.head())
+
+        if 'Pakiet od 02.07' in xls.sheet_names:
+            Lg = pd.read_excel(df, sheet_name='Pakiet od 02.07', skiprows=7, usecols=[1, 6])
+            st.write("Dane z arkusza Pakiet od 02.07:")
+            st.write(Lg.head())
+
+        # --- CZYSZCZENIE I PRZYGOTOWANIE DANYCH ---
+        if not Lr.empty:
+            Lr.columns = ['Klient', 'Pakiet']
+            Lr = Lr.dropna(subset=['Pakiet', 'Klient'])
+            Lr = Lr[Lr['Klient'] != '(puste)']
+            Lr['Klient'] = Lr['Klient'].astype(int)
+
+            # Identyfikacja sieciowych
+            Lr['SIECIOWY'] = Lr.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['Pakiet']).lower() else '', axis=1)
+            
+            # Ekstrakcja i konwersja wartości procentowych
+            Lr['Pakiet'] = Lr['Pakiet'].apply(extract_percentage)
+            Lr['Pakiet'] = Lr['Pakiet'].apply(percentage_to_float)
+            
+            # Filtrowanie pakietów równe 20%
+            Lr = Lr[Lr['Pakiet'] == 20]
+
+            # Przypisanie Grupy Promocyjnej na podstawie wielkości rabatu
+            mapa_grupa_rabat = {
+                20: 'VIT_D3_MAX_20',
+                25: 'VIT_D3_MAX_25'
+            }
+            Lr['Grupa promocyjna'] = Lr['Pakiet'].map(mapa_grupa_rabat).fillna('VIT_D3_MAX_20')
+
+            # Wyznaczenie max_percent dla sieciowych i indywidualnych
+            Lr1 = Lr[Lr['SIECIOWY'] == 'SIECIOWY'].copy()
+            Lr2 = Lr[Lr['SIECIOWY'] != 'SIECIOWY'].copy()
+            Lr1['max_percent'] = Lr1['Pakiet']
+            Lr2['max_percent'] = Lr2['Pakiet']
+
+            pow_lr = Lr1[['Klient', 'max_percent', 'Grupa promocyjna']]
+            stand_lr = Lr2[['Klient', 'max_percent', 'Grupa promocyjna']].rename(columns={'Klient': 'Kod SAP'})
+
+        if not Lg.empty:
+            Lg.columns = ['Klient', 'Pakiet']
+            Lg = Lg.dropna(subset=['Pakiet', 'Klient'])
+            Lg = Lg[~Lg['Pakiet'].str.lower().str.contains('brak')]
+            Lg = Lg[Lg['Klient'] != '(puste)']
+            Lg['Klient'] = Lg['Klient'].astype(int)
+
+            Lg['pakiet'] = Lg['Pakiet'].apply(extract_numbers_as_text)
+            
+            # Mapowanie pakietów na format 'Nielogiczne'
+            mapa_nielogiczne = {
+                '10+4': '10+4',
+                '50+21': '10+4, 50+21',
+                '100+45': '20+9'
+            }
+            
+            pow_lg = Lg[['Klient', 'pakiet']].copy()
+            pow_lg['Nielogiczne'] = pow_lg['pakiet'].map(mapa_nielogiczne)
+            pow_lg = pow_lg.dropna(subset=['Nielogiczne'])
+
+            # Przypisanie Grupy Promocyjnej
+            pow_lg['Grupa promocyjna'] = pow_lg['Nielogiczne'].map(mapa_grupa_promocyjna_pakiet)
+
+            st.write("Wiersze dopasowane i zmienione według mapy (Pakiet):")
+            st.dataframe(pow_lg)
+
+        # --- OBSŁUGA PLIKU IMS ---
+        ims = st.file_uploader(label="Wrzuć plik ims_nhd")
+        
+        if ims:
+            ims = pd.read_excel(ims, usecols=[0, 2, 19, 21])
+            ims = ims[ims['APD_Czy_istnieje_na_rynku'] == 1]
+            ims = ims[ims['APD_Rodzaj_farmaceutyczny'].isin(['AP - Apteka', 'ME - Sklep zielarsko - medyczny', 'PU - Punkt apteczny'])]
+
+            # --- ŁĄCZENIE LR (RABAT) ---
+            if 'pow_lr' in locals() and not pow_lr.empty:
+                wynik_df_lr = pd.merge(pow_lr, ims, left_on='Klient', right_on='Klient', how='left')
+                wynik_df1_lr = wynik_df_lr[['APD_kod_SAP_apteki', 'max_percent', 'Grupa promocyjna']].rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
+                wynik_df2_lr = wynik_df_lr[['Klient', 'max_percent', 'Grupa promocyjna']].rename(columns={'Klient': 'Kod SAP'})
+                
+                polaczone_lr = pd.concat([stand_lr, wynik_df1_lr, wynik_df2_lr], axis=0)
+                posortowane_lr = polaczone_lr.sort_values(by='max_percent', ascending=False)
+                ostatecznie_lr = posortowane_lr.drop_duplicates(subset='Kod SAP')
+                ostatecznie_lr = ostatecznie_lr[ostatecznie_lr['max_percent'] != 0]
+
+            # --- ŁĄCZENIE LG (PAKIET) ---
+            if 'pow_lg' in locals() and not pow_lg.empty:
+                wynik_df_lg = pd.merge(pow_lg, ims, left_on='Klient', right_on='Klient', how='left')
+                wynik_df1_lg = wynik_df_lg[['APD_kod_SAP_apteki', 'Nielogiczne', 'Grupa promocyjna']].rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
+                wynik_df2_lg = wynik_df_lg[['Klient', 'Nielogiczne', 'Grupa promocyjna']].rename(columns={'Klient': 'Kod SAP'})
+                
+                polaczone_lg = pd.concat([wynik_df1_lg, wynik_df2_lg], axis=0)
+                ostatecznie_lg = polaczone_lg.dropna(subset=['Kod SAP']).drop_duplicates(subset=['Kod SAP', 'Nielogiczne', 'Grupa promocyjna'])
+
+            # --- PIERWSZY MONITORING: GENEROWANIE PLIKU ---
+            st.write('Jeśli to pierwszy monitoring, pobierz ten plik. Jeśli nie, wrzuć plik z poprzedniego monitoringu poniżej.')
+            excel_file = io.BytesIO()
+            
+            with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
+                if 'ostatecznie_lr' in locals() and not ostatecznie_lr.empty:
+                    ostatecznie_lr.to_excel(writer, index=False, sheet_name='Rabat')
+                if 'ostatecznie_lg' in locals() and not ostatecznie_lg.empty:
+                    ostatecznie_lg.to_excel(writer, index=False, sheet_name='Pakiet')
+
+            excel_file.seek(0)
+            st.download_button(
+                label='Pobierz, jeśli to pierwszy monitoring',
+                data=excel_file,
+                file_name='czy_dodac.xlsx',
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+
+            # --- PORÓWNANIE Z POPRZEDNIM MONITORINGIEM ---
+            poprzedni = st.file_uploader(label="Wrzuć plik z poprzedniego monitoringu")
+            
+            if poprzedni:
+                xls_pop = pd.ExcelFile(poprzedni)
+                
+                # Porównanie Rabat
+                if 'Rabat' in xls_pop.sheet_names and 'ostatecznie_lr' in locals():
+                    poprzedni_lr = pd.read_excel(poprzedni, sheet_name='Rabat')
+                    poprzedni_lr = poprzedni_lr.rename(columns={'max_percent': 'old_percent'})
+                    
+                    ostatecznie_lr['Kod SAP'] = ostatecznie_lr['Kod SAP'].astype(str).str.strip()
+                    poprzedni_lr['Kod SAP'] = poprzedni_lr['Kod SAP'].astype(str).str.strip()
+                    
+                    result_lr = ostatecznie_lr.merge(
+                        poprzedni_lr[['Kod SAP', 'old_percent']],
+                        on='Kod SAP',
+                        how='left'
+                    )
+                    result_lr['old_percent'] = result_lr['old_percent'].fillna(0)
+                    result_lr['Czy dodać'] = result_lr.apply(
+                        lambda row: 'DODAJ' if row['max_percent'] > row['old_percent'] else '',
+                        axis=1
+                    )
+                else:
+                    result_lr = ostatecznie_lr.copy() if 'ostatecznie_lr' in locals() else pd.DataFrame()
+                    if not result_lr.empty:
+                        result_lr['Czy dodać'] = 'DODAJ'
+
+                # Porównanie Pakiet
+                if 'Pakiet' in xls_pop.sheet_names and 'ostatecznie_lg' in locals():
+                    poprzedni_lg = pd.read_excel(poprzedni, sheet_name='Pakiet')
+                    
+                    poprzedni_lg['Kod SAP'] = poprzedni_lg['Kod SAP'].astype(str).str.strip()
+                    ostatecznie_lg['Kod SAP'] = ostatecznie_lg['Kod SAP'].astype(str).str.strip()
+
+                    result_lg = pd.concat([ostatecznie_lg, poprzedni_lg], ignore_index=True)
+                    result_lg = result_lg.drop_duplicates(subset=['Kod SAP', 'Nielogiczne', 'Grupa promocyjna'], keep='first')
+                    
+                    # Sprawdzanie unikalności potrójnego klucza (Kod SAP, Nielogiczne, Grupa promocyjna)
+                    pary_poprzednie = set(zip(poprzedni_lg['Kod SAP'], poprzedni_lg['Nielogiczne'], poprzedni_lg['Grupa promocyjna']))
+                    result_lg['Czy dodać'] = result_lg.apply(
+                        lambda row: '' if (row['Kod SAP'], row['Nielogiczne'], row['Grupa promocyjna']) in pary_poprzednie else 'DODAJ',
+                        axis=1
+                    )
+                else:
+                    result_lg = ostatecznie_lg.copy() if 'ostatecznie_lg' in locals() else pd.DataFrame()
+                    if not result_lg.empty:
+                        result_lg['Czy dodać'] = 'DODAJ'
+
+                # --- EXPORT PLIKU Z "CZY DODAĆ" ---
+                excel_file1 = io.BytesIO()
+                with pd.ExcelWriter(excel_file1, engine='xlsxwriter') as writer:
+                    if 'result_lr' in locals() and not result_lr.empty:
+                        result_lr.to_excel(writer, index=False, sheet_name='Rabat')
+                    if 'result_lg' in locals() and not result_lg.empty:
+                        result_lg.to_excel(writer, index=False, sheet_name='Pakiet')
+
+                excel_file1.seek(0)
+                nazwa_pliku = f"VIT_D_{dzisiejsza_data}.xlsx"
+                st.download_button(
+                    label='Kliknij aby pobrać plik z kodami, które kody należy dodać',
+                    data=excel_file1,
+                    file_name=nazwa_pliku,
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+
+                # --- EXPORT PLIKU "FORMUŁA MAX" (DO NASTĘPNEGO MONITORINGU) ---
+                if 'result_lr' in locals() and not result_lr.empty:
+                    result_lr_fm = result_lr.drop(columns=['old_percent', 'Czy dodać'], errors='ignore')
+                else:
+                    result_lr_fm = pd.DataFrame()
+
+                if 'result_lg' in locals() and not result_lg.empty:
+                    result_lg_fm = result_lg.drop(columns=['Czy dodać'], errors='ignore')
+                else:
+                    result_lg_fm = pd.DataFrame()
+
+                excel_file2 = io.BytesIO()
+                with pd.ExcelWriter(excel_file2, engine='xlsxwriter') as writer:
+                    if not result_lr_fm.empty:
+                        result_lr_fm.to_excel(writer, index=False, sheet_name='Rabat')
+                    if not result_lg_fm.empty:
+                        result_lg_fm.to_excel(writer, index=False, sheet_name='Pakiet')
+
+                excel_file2.seek(0)
+                nazwa_pliku_fm = f"FM_VIT_D_{dzisiejsza_data}.xlsx"
+                st.download_button(
+                    label='Pobierz nowy plik FORMUŁA MAX',
+                    data=excel_file2,
+                    file_name=nazwa_pliku_fm,
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
 
 
 
