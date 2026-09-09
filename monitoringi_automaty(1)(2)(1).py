@@ -1512,7 +1512,7 @@ if sekcja == 'Vit D':
             st.write(Lr.head())
 
         if 'Pakiet od 02.07' in xls.sheet_names:
-            Lg = pd.read_excel(df, sheet_name='Pakiet od 02.07', skiprows=12, usecols=[1, 6])
+            Lg = pd.read_excel(df, sheet_name='Pakiet od 02.07', skiprows=7, usecols=[1, 6])
             st.write("Dane z arkusza Pakiet od 02.07:")
             st.write(Lg.head())
 
@@ -1530,15 +1530,11 @@ if sekcja == 'Vit D':
             Lr['Pakiet'] = Lr['Pakiet'].apply(extract_percentage)
             Lr['Pakiet'] = Lr['Pakiet'].apply(percentage_to_float)
             
-            # Filtrowanie pakietów równe 20%
-            Lr = Lr[Lr['Pakiet'] == 20]
+            # Zostawiamy rabaty równe lub większe od 20% (w tym 25%)
+            Lr = Lr[Lr['Pakiet'] >= 20]
 
-            # Przypisanie Grupy Promocyjnej na podstawie wielkości rabatu
-            mapa_grupa_rabat = {
-                20: 'VIT_D3_MAX_20',
-                25: 'VIT_D3_MAX_25'
-            }
-            Lr['Grupa promocyjna'] = Lr['Pakiet'].map(mapa_grupa_rabat).fillna('VIT_D3_MAX_20')
+            # Dynamiczne generowanie grupy promocyjnej na podstawie wartości procentowej
+            Lr['Grupa promocyjna'] = Lr['Pakiet'].apply(lambda x: f"VIT_D3_MAX_{int(x)}")
 
             # Wyznaczenie max_percent dla sieciowych i indywidualnych
             Lr1 = Lr[Lr['SIECIOWY'] == 'SIECIOWY'].copy()
@@ -1572,7 +1568,7 @@ if sekcja == 'Vit D':
             # Przypisanie Grupy Promocyjnej
             pow_lg['Grupa promocyjna'] = pow_lg['Nielogiczne'].map(mapa_grupa_promocyjna_pakiet)
 
-            st.write("Wiersze dopasowane i zmienione według mapy (Pakiet):")
+            st.write("Wiersze dopasowane i zmienione według mapy (Pakiet od 02.07):")
             st.dataframe(pow_lg)
 
         # --- OBSŁUGA PLIKU IMS ---
@@ -1591,10 +1587,10 @@ if sekcja == 'Vit D':
                 
                 polaczone_lr = pd.concat([stand_lr, wynik_df1_lr, wynik_df2_lr], axis=0)
                 posortowane_lr = polaczone_lr.sort_values(by='max_percent', ascending=False)
-                ostatecznie_lr = posortowane_lr.drop_duplicates(subset='Kod SAP')
+                ostatecznie_lr = posortowane_lr.drop_duplicates(subset=['Kod SAP', 'Grupa promocyjna'])
                 ostatecznie_lr = ostatecznie_lr[ostatecznie_lr['max_percent'] != 0]
 
-            # --- ŁĄCZENIE LG (PAKIET) ---
+            # --- ŁĄCZENIE LG (PAKIET OD 02.07) ---
             if 'pow_lg' in locals() and not pow_lg.empty:
                 wynik_df_lg = pd.merge(pow_lg, ims, left_on='Klient', right_on='Klient', how='left')
                 wynik_df1_lg = wynik_df_lg[['APD_kod_SAP_apteki', 'Nielogiczne', 'Grupa promocyjna']].rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
@@ -1636,8 +1632,8 @@ if sekcja == 'Vit D':
                     poprzedni_lr['Kod SAP'] = poprzedni_lr['Kod SAP'].astype(str).str.strip()
                     
                     result_lr = ostatecznie_lr.merge(
-                        poprzedni_lr[['Kod SAP', 'old_percent']],
-                        on='Kod SAP',
+                        poprzedni_lr[['Kod SAP', 'Grupa promocyjna', 'old_percent']],
+                        on=['Kod SAP', 'Grupa promocyjna'],
                         how='left'
                     )
                     result_lr['old_percent'] = result_lr['old_percent'].fillna(0)
@@ -1650,9 +1646,9 @@ if sekcja == 'Vit D':
                     if not result_lr.empty:
                         result_lr['Czy dodać'] = 'DODAJ'
 
-                # Porównanie Pakiet
-                if 'Pakiet' in xls_pop.sheet_names and 'ostatecznie_lg' in locals():
-                    poprzedni_lg = pd.read_excel(poprzedni, sheet_name='Pakiet')
+                # Porównanie Pakiet od 02.07
+                if 'Pakiet od 02.07' in xls_pop.sheet_names and 'ostatecznie_lg' in locals():
+                    poprzedni_lg = pd.read_excel(poprzedni, sheet_name='Pakiet od 02.07')
                     
                     poprzedni_lg['Kod SAP'] = poprzedni_lg['Kod SAP'].astype(str).str.strip()
                     ostatecznie_lg['Kod SAP'] = ostatecznie_lg['Kod SAP'].astype(str).str.strip()
@@ -1660,7 +1656,6 @@ if sekcja == 'Vit D':
                     result_lg = pd.concat([ostatecznie_lg, poprzedni_lg], ignore_index=True)
                     result_lg = result_lg.drop_duplicates(subset=['Kod SAP', 'Nielogiczne', 'Grupa promocyjna'], keep='first')
                     
-                    # Sprawdzanie unikalności potrójnego klucza (Kod SAP, Nielogiczne, Grupa promocyjna)
                     pary_poprzednie = set(zip(poprzedni_lg['Kod SAP'], poprzedni_lg['Nielogiczne'], poprzedni_lg['Grupa promocyjna']))
                     result_lg['Czy dodać'] = result_lg.apply(
                         lambda row: '' if (row['Kod SAP'], row['Nielogiczne'], row['Grupa promocyjna']) in pary_poprzednie else 'DODAJ',
@@ -1677,7 +1672,7 @@ if sekcja == 'Vit D':
                     if 'result_lr' in locals() and not result_lr.empty:
                         result_lr.to_excel(writer, index=False, sheet_name='Rabat')
                     if 'result_lg' in locals() and not result_lg.empty:
-                        result_lg.to_excel(writer, index=False, sheet_name='Pakiet')
+                        result_lg.to_excel(writer, index=False, sheet_name='Pakiet od 02.07')
 
                 excel_file1.seek(0)
                 nazwa_pliku = f"VIT_D_{dzisiejsza_data}.xlsx"
@@ -1704,7 +1699,7 @@ if sekcja == 'Vit D':
                     if not result_lr_fm.empty:
                         result_lr_fm.to_excel(writer, index=False, sheet_name='Rabat')
                     if not result_lg_fm.empty:
-                        result_lg_fm.to_excel(writer, index=False, sheet_name='Pakiet')
+                        result_lg_fm.to_excel(writer, index=False, sheet_name='Pakiet od 02.07')
 
                 excel_file2.seek(0)
                 nazwa_pliku_fm = f"FM_VIT_D_{dzisiejsza_data}.xlsx"
@@ -1714,8 +1709,6 @@ if sekcja == 'Vit D':
                     file_name=nazwa_pliku_fm,
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
-
-
 
 
 
