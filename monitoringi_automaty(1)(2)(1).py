@@ -1514,7 +1514,9 @@ if sekcja == 'Vit D':
             Lr.columns = ['Klient', 'Pakiet']
             Lr = Lr.dropna(subset=['Pakiet', 'Klient'])
             Lr = Lr[Lr['Klient'] != '(puste)']
-            Lr['Klient'] = Lr['Klient'].astype(int)
+            
+            # Formatujemy Klienta jako tekst bez .0
+            Lr['Klient'] = Lr['Klient'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
 
             # Identyfikacja sieciowych
             Lr['SIECIOWY'] = Lr.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['Pakiet']).lower() else '', axis=1)
@@ -1543,7 +1545,9 @@ if sekcja == 'Vit D':
             Lg = Lg.dropna(subset=['Pakiet', 'Klient'])
             Lg = Lg[~Lg['Pakiet'].str.lower().str.contains('brak')]
             Lg = Lg[Lg['Klient'] != '(puste)']
-            Lg['Klient'] = Lg['Klient'].astype(int)
+            
+            # Formatujemy Klienta jako tekst bez .0
+            Lg['Klient'] = Lg['Klient'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
 
             Lg['pakiet'] = Lg['Pakiet'].apply(extract_numbers_as_text)
             
@@ -1586,6 +1590,11 @@ if sekcja == 'Vit D':
             ims = ims[ims['APD_Czy_istnieje_na_rynku'] == 1]
             ims = ims[ims['APD_Rodzaj_farmaceutyczny'].isin(['AP - Apteka', 'ME - Sklep zielarsko - medyczny', 'PU - Punkt apteczny'])]
 
+            # Czyszczenie kolumn identyfikacyjnych z kropki .0 w IMS
+            for col in ims.columns:
+                if 'sap' in col.lower() or 'klient' in col.lower():
+                    ims[col] = ims[col].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+
             # --- ŁĄCZENIE LR (RABAT) ---
             if 'pow_lr' in locals() and not pow_lr.empty:
                 wynik_df_lr = pd.merge(pow_lr, ims, left_on='Klient', right_on='Klient', how='left')
@@ -1593,6 +1602,11 @@ if sekcja == 'Vit D':
                 wynik_df2_lr = wynik_df_lr[['Klient', 'max_percent', 'Grupa promocyjna']].rename(columns={'Klient': 'Kod SAP'})
                 
                 polaczone_lr = pd.concat([stand_lr, wynik_df1_lr, wynik_df2_lr], axis=0)
+                
+                # Usuwanie kropki i pustych wartości wygenerowanych przez concat/merge
+                polaczone_lr['Kod SAP'] = polaczone_lr['Kod SAP'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+                polaczone_lr = polaczone_lr[~polaczone_lr['Kod SAP'].isin(['nan', 'None', ''])]
+
                 posortowane_lr = polaczone_lr.sort_values(by='max_percent', ascending=False)
                 ostatecznie_lr = posortowane_lr.drop_duplicates(subset=['Kod SAP', 'Grupa promocyjna'])
                 ostatecznie_lr = ostatecznie_lr[ostatecznie_lr['max_percent'] != 0]
@@ -1604,6 +1618,11 @@ if sekcja == 'Vit D':
                 wynik_df2_lg = wynik_df_lg[['Klient', 'Rodzaj pakietu', 'Grupa promocyjna']].rename(columns={'Klient': 'Kod SAP'})
                 
                 polaczone_lg = pd.concat([wynik_df1_lg, wynik_df2_lg], axis=0)
+                
+                # Usuwanie kropki i pustych wartości wygenerowanych przez concat/merge
+                polaczone_lg['Kod SAP'] = polaczone_lg['Kod SAP'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+                polaczone_lg = polaczone_lg[~polaczone_lg['Kod SAP'].isin(['nan', 'None', ''])]
+
                 ostatecznie_lg = polaczone_lg.dropna(subset=['Kod SAP']).drop_duplicates(subset=['Kod SAP', 'Rodzaj pakietu', 'Grupa promocyjna'])
 
             # --- PIERWSZY MONITORING: GENEROWANIE PLIKU ---
@@ -1635,8 +1654,8 @@ if sekcja == 'Vit D':
                     poprzedni_lr = pd.read_excel(poprzedni, sheet_name='Rabat')
                     poprzedni_lr = poprzedni_lr.rename(columns={'max_percent': 'old_percent'})
                     
-                    ostatecznie_lr['Kod SAP'] = ostatecznie_lr['Kod SAP'].astype(str).str.strip()
-                    poprzedni_lr['Kod SAP'] = poprzedni_lr['Kod SAP'].astype(str).str.strip()
+                    ostatecznie_lr['Kod SAP'] = ostatecznie_lr['Kod SAP'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+                    poprzedni_lr['Kod SAP'] = poprzedni_lr['Kod SAP'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                     
                     result_lr = ostatecznie_lr.merge(
                         poprzedni_lr[['Kod SAP', 'Grupa promocyjna', 'old_percent']],
@@ -1661,8 +1680,8 @@ if sekcja == 'Vit D':
                     if 'Nielogiczne' in poprzedni_lg.columns and 'Rodzaj pakietu' not in poprzedni_lg.columns:
                         poprzedni_lg = poprzedni_lg.rename(columns={'Nielogiczne': 'Rodzaj pakietu'})
 
-                    poprzedni_lg['Kod SAP'] = poprzedni_lg['Kod SAP'].astype(str).str.strip()
-                    ostatecznie_lg['Kod SAP'] = ostatecznie_lg['Kod SAP'].astype(str).str.strip()
+                    poprzedni_lg['Kod SAP'] = poprzedni_lg['Kod SAP'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+                    ostatecznie_lg['Kod SAP'] = ostatecznie_lg['Kod SAP'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
 
                     result_lg = pd.concat([ostatecznie_lg, poprzedni_lg], ignore_index=True)
                     result_lg = result_lg.drop_duplicates(subset=['Kod SAP', 'Rodzaj pakietu', 'Grupa promocyjna'], keep='first')
@@ -1720,7 +1739,6 @@ if sekcja == 'Vit D':
                     file_name=nazwa_pliku_fm,
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
-
 
 
 
