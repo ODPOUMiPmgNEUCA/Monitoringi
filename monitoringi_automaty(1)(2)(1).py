@@ -111,7 +111,7 @@ if sekcja == 'Zioła mix':
 
     # Wybierz wiersze, gdzie 'max_percent' nie jest równa 0
     filtered_df = df[df['max_percent'] != 0]
-    filtered_df = df[df['max_percent'] == 0.15]
+    filtered_df = df[df['max_percent'] == 15]
 
     standard = filtered_df[filtered_df['SIECIOWY'] != 'SIECIOWY']
     powiazanie = filtered_df[filtered_df['SIECIOWY'] == 'SIECIOWY']
