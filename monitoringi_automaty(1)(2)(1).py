@@ -566,40 +566,42 @@ if sekcja == 'Standy wrzesień-marzec':
     st.write(tabs_font_css, unsafe_allow_html=True)
 
     df = st.file_uploader(
-        label = "Wrzuć plik Cykl - Standy wrzesień-marzec"
+    label = "Wrzuć plik - Standy wrzesień-marzec"
     )
     if df:
-        df = pd.read_excel(df, sheet_name = 'Rabat', skiprows = 16, usecols = [1,2,9])
+        df = pd.read_excel(df, sheet_name = 'Rabat', skiprows = 10, usecols = [1,3,9])
         st.write(df.head())
-
-
-    #usuń braki danych z Kod klienta
-    df = df.dropna(subset=['Kod klienta'])
+        
+        #usuń braki danych z Kod klienta
+    df = df.dropna(subset=['Kod SAP'])
 
     # klient na całkowite
-    df['KLIENT'] = df['KLIENT'].astype(int)
-    df['Kod klienta'] = df['Kod klienta'].astype(int)
+    df = df[df['Klient'] != '(puste)']
+    df['Klient'] = df['Klient'].astype(int)
+    df['Kod SAP'] = df['Kod SAP'].astype(int)
 
     # Zmiana nazw kolumn
-    df = df.rename(columns={'0.16.2': '16'})
+    #df = df.rename(columns={'0.12.1': '12', '0.14.1': '14'})
 
     #Dodaj kolumnę 'SIECIOWY', która będzie zawierać 'SIECIOWY' jeśli w kolumnach '12' lub '14' jest słowo 'powiązanie'
-    df['SIECIOWY'] = df.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['16']).lower() else '', axis=1)
+    df['SIECIOWY'] = df.apply(lambda row: 'SIECIOWY' if 'powiązanie' in str(row['Pakiet']).lower() else '', axis=1)
 
     #SPRAWDZENIE CZY DZIAŁA
-    #df[df['SIECIOWY'] == 'SIECIOWY']
+    df[df['SIECIOWY'] == 'SIECIOWY']
     #DZIAŁA :)
 
     
     # Zastosowanie funkcji do kolumn '12' i '14'
-    df['16_percent'] = df['16'].apply(extract_percentage)
+    df['Pakiet'] = df['Pakiet'].apply(extract_percentage)
+    #df['14_percent'] = df['14'].apply(extract_percentage)
 
 
     # Konwersja kolumn '12_percent' i '14_percent' na liczby zmiennoprzecinkowe
-    df['16_percent'] = df['16_percent'].apply(percentage_to_float)
+    df['Pakiet'] = df['Pakiet'].apply(percentage_to_float)
+    #df['14_percent'] = df['14_percent'].apply(percentage_to_float)
 
     # Dodaj nową kolumnę 'max_percent' z maksymalnymi wartościami z kolumn '12_percent' i '14_percent'
-    df['max_percent'] = df[['16_percent']].max(axis=1)
+    df['max_percent'] = df[['Pakiet']].max(axis=1)
 
     # Wybierz wiersze, gdzie 'max_percent' nie jest równa 0
     filtered_df = df[df['max_percent'] != 0]
@@ -609,9 +611,9 @@ if sekcja == 'Standy wrzesień-marzec':
 
     #len(standard), len(powiazanie), len(filtered_df)
 
-    standard_ost = standard[['Kod klienta', 'max_percent']]
+    standard_ost = standard[['Kod SAP', 'max_percent']]
 
-    powiazanie = powiazanie[['KLIENT','Kod klienta','max_percent']]
+    powiazanie = powiazanie[['Klient','Kod SAP','max_percent']]
 
 
     #TERAZ IMS
@@ -626,20 +628,20 @@ if sekcja == 'Standy wrzesień-marzec':
     ims = ims[ims['APD_Czy_istnieje_na_rynku']==1]
     ims = ims[ims['APD_Rodzaj_farmaceutyczny'].isin(['AP - Apteka','ME - Sklep zielarsko - medyczny','PU - Punkt apteczny'])]
 
-    wynik_df = pd.merge(powiazanie, ims, left_on='KLIENT', right_on='Klient', how='left')
+    wynik_df = pd.merge(powiazanie, ims, left_on='Klient', right_on='Klient', how='left')
 
     #Wybór potrzebnych kolumn: 'APD_kod_SAP_apteki' i 'max_percent'
-    wynik_df = wynik_df[['KLIENT','APD_kod_SAP_apteki', 'max_percent']]
+    wynik_df = wynik_df[['Klient','APD_kod_SAP_apteki', 'max_percent']]
 
 
     #to są kody SAP
-    wynik_df1 = wynik_df.rename(columns={'APD_kod_SAP_apteki': 'Kod klienta'})
-    wynik_df1 = wynik_df1[['Kod klienta','max_percent']]
+    wynik_df1 = wynik_df.rename(columns={'APD_kod_SAP_apteki': 'Kod SAP'})
+    wynik_df1 = wynik_df1[['Kod SAP','max_percent']]
     #wynik_df1
 
     #to są kody powiazan
-    wynik_df2 = wynik_df.rename(columns={'KLIENT': 'Kod klienta'})
-    wynik_df2 = wynik_df2[['Kod klienta','max_percent']]
+    wynik_df2 = wynik_df.rename(columns={'Klient': 'Kod SAP'})
+    wynik_df2 = wynik_df2[['Kod SAP','max_percent']]
     #wynik_df2
 
     #POŁĄCZYĆ wynik_df z standard_ost
@@ -647,7 +649,7 @@ if sekcja == 'Standy wrzesień-marzec':
   
     posortowane = polaczone.sort_values(by='max_percent', ascending=False)
 
-    ostatecznie = posortowane.drop_duplicates(subset='Kod klienta')
+    ostatecznie = posortowane.drop_duplicates(subset='Kod SAP')
 
 
     st.write('Jeśli to pierwszy monitoring, pobierz ten plik, jeśli nie, wrzuć plik z poprzedniego monitoringu i NIE POBIERAJ TEGO PLIKU')
@@ -675,7 +677,7 @@ if sekcja == 'Standy wrzesień-marzec':
 
     poprzedni = poprzedni.rename(columns={'max_percent': 'old_percent'})
     # Wykonanie left join, dodanie 'old_percent' do pliku 'ostatecznie'
-    result = ostatecznie.merge(poprzedni[['Kod klienta', 'old_percent']], on='Kod klienta', how='left')
+    result = ostatecznie.merge(poprzedni[['Kod SAP', 'old_percent']], on='Kod SAP', how='left')
     result['old_percent'] = result['old_percent'].fillna(0)
     result['Czy dodać'] = result.apply(lambda row: 'DODAJ' if row['max_percent'] > row['old_percent'] else '', axis=1)
     st.write('Kliknij aby pobrać plik z kodami, które kody należy dodać')
@@ -685,7 +687,7 @@ if sekcja == 'Standy wrzesień-marzec':
         result.to_excel(writer, index=False, sheet_name='Sheet1')
     excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
 
-    nazwa_pliku1 = f"STANDY_w-m_{dzisiejsza_data}.xlsx"
+    nazwa_pliku1 = f"Standy_wrzesień-marzec_{dzisiejsza_data}.xlsx"
     #Umożliwienie pobrania pliku Excel
     st.download_button(
         label='Pobierz',
@@ -703,7 +705,7 @@ if sekcja == 'Standy wrzesień-marzec':
         result.to_excel(writer, index=False, sheet_name='Sheet1')
     excel_file1.seek(0)  # Resetowanie wskaźnika do początku pliku
 
-    nazwa_pliku = f"FM_STANDY_w-m_{dzisiejsza_data}.xlsx"
+    nazwa_pliku = f"FM_Standy_wrzesień-marzec_{dzisiejsza_data}.xlsx"
     # Umożliwienie pobrania pliku Excel
     st.download_button(
         label='Pobierz nowy plik FORMUŁA MAX',
